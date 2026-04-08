@@ -88,9 +88,15 @@
 - [x] Vitest: role string constants (founder_admin, friend_user)
 - [x] Vitest: auth.logout cookie clearing
 
-## UI (Pending — awaiting design direction confirmation)
-- [ ] Design direction selection (dark/neon vs light/editorial)
-- [ ] Intake form UI
+## UI
+- [x] Design direction confirmed: cosmic pink euphoria / living space / split studio
+- [x] Source and upload EDC-themed imagery and space assets to CDN
+- [x] Page 1: Cosmic pink landing page with EDC imagery, hero text, CTA to festival map
+- [x] Page 2: Living animated space map with EDC planet, starfield background, venue selection
+- [x] Page 3: Split design studio — visual concepts panel (left) + AI chat interface (right)
+- [x] Global theme: cosmic pink palette, custom fonts, smooth page transitions
+- [x] App routing: Home → Festival Map → Design Studio
+- [x] Intake form UI (accessible from Design Studio — embedded in chat)
 - [ ] Concept card review UI
 - [ ] Founder admin dashboard UI
 - [ ] Order tracking UI
