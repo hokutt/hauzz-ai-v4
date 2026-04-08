@@ -26,11 +26,13 @@ function ConceptCard({
   concept,
   isSelected,
   onSelect,
+  onReject,
   index,
 }: {
   concept: ConceptCardData;
   isSelected: boolean;
   onSelect: () => void;
+  onReject?: () => void;
   index: number;
 }) {
   const images = [RAVE_FASHION, NEBULA_PINK, GALAXY_STARS];
@@ -104,6 +106,26 @@ function ConceptCard({
             </span>
           )}
         </div>
+
+        {/* Select / Reject actions */}
+        {!isSelected && onReject && (
+          <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="flex-1 py-1.5 rounded-xl text-xs font-semibold transition-all"
+              style={{ background: "oklch(0.72 0.22 340 / 0.15)", color: "oklch(0.85 0.18 340)", border: "1px solid oklch(0.72 0.22 340 / 0.3)" }}
+              onClick={onSelect}
+            >
+              Select
+            </button>
+            <button
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+              style={{ background: "oklch(0.65 0.10 20 / 0.15)", color: "oklch(0.75 0.12 20)", border: "1px solid oklch(0.65 0.10 20 / 0.3)" }}
+              onClick={onReject}
+            >
+              Reject
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -257,6 +279,7 @@ export default function DesignStudio() {
 
   const submitIntakeMutation = trpc.intake.submit.useMutation();
   const selectConceptMutation = trpc.design.selectConcept.useMutation();
+  const rejectConceptMutation = trpc.design.rejectConcept.useMutation();
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -312,6 +335,23 @@ export default function DesignStudio() {
       addMessage("assistant", `Something went wrong generating concepts: ${err?.message ?? "Unknown error"}. Try again or describe your vibe differently.`);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleRejectConcept = async (conceptId: number) => {
+    const concept = concepts.find((c) => c.id === conceptId);
+    if (!concept || !requestId) return;
+    addMessage("user", `The **${concept.storyName}** direction isn't quite right.`);
+    addMessage("assistant", `Got it — rejecting **${concept.storyName}** and triggering a fresh concept round. New directions will appear shortly.`);
+    try {
+      await rejectConceptMutation.mutateAsync({
+        designRequestId: requestId,
+        conceptCardId: conceptId,
+        notes: `Rejected via Design Studio — ${concept.storyName}`,
+      });
+      setConcepts((prev) => prev.filter((c) => c.id !== conceptId));
+    } catch (err: any) {
+      addMessage("assistant", `Rejection noted. ${err?.message ? `(${err.message})` : ""}`);
     }
   };
 
@@ -470,6 +510,7 @@ export default function DesignStudio() {
                     index={i}
                     isSelected={selectedConcept === concept.id}
                     onSelect={() => handleSelectConcept(concept.id)}
+                    onReject={() => handleRejectConcept(concept.id)}
                   />
                 ))}
               </div>

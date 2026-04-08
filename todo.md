@@ -97,6 +97,6 @@
 - [x] Global theme: cosmic pink palette, custom fonts, smooth page transitions
 - [x] App routing: Home → Festival Map → Design Studio
 - [x] Intake form UI (accessible from Design Studio — embedded in chat)
-- [ ] Concept card review UI
-- [ ] Founder admin dashboard UI
-- [ ] Order tracking UI
+- [x] Concept card review UI — concept cards shown in DesignStudio with select/reject actions
+- [x] Founder admin dashboard UI — /admin route with overview, requests, orders, vendors, agent logs
+- [x] Order tracking UI — production orders tab in admin dashboard with advance stage controls
