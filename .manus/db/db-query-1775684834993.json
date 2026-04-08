@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS vendor_scores (id int AUTO_INCREMENT NOT NULL, designPacketId int NOT NULL, vendorId int NOT NULL, capabilityScore float NOT NULL, timelineScore float NOT NULL, reliabilityScore float NOT NULL, priceScore float NOT NULL, communicationsScore float NOT NULL, totalScore float NOT NULL, vendorRank int NOT NULL, scoringBreakdown json, createdAt timestamp NOT NULL DEFAULT (now()), CONSTRAINT vendor_scores_id PRIMARY KEY(id))",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8YkcwCHKeaoCakm.root --database FxMGuZEdHFz8kEGUUru2UP --execute CREATE TABLE IF NOT EXISTS vendor_scores (id int AUTO_INCREMENT NOT NULL, designPacketId int NOT NULL, vendorId int NOT NULL, capabilityScore float NOT NULL, timelineScore float NOT NULL, reliabilityScore float NOT NULL, priceScore float NOT NULL, communicationsScore float NOT NULL, totalScore float NOT NULL, vendorRank int NOT NULL, scoringBreakdown json, createdAt timestamp NOT NULL DEFAULT (now()), CONSTRAINT vendor_scores_id PRIMARY KEY(id))",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 416
+}

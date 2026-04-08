@@ -1,0 +1,8 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `venue_dna` (`id` int AUTO_INCREMENT NOT NULL, `venueId` int NOT NULL, `category` varchar(64) NOT NULL, `title` varchar(255) NOT NULL, `content` text NOT NULL, `tags` json DEFAULT ('[]'), `createdAt` timestamp NOT NULL DEFAULT (now()), CONSTRAINT `venue_dna_id` PRIMARY KEY(`id`))",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8YkcwCHKeaoCakm.root --database FxMGuZEdHFz8kEGUUru2UP --execute CREATE TABLE IF NOT EXISTS `venue_dna` (`id` int AUTO_INCREMENT NOT NULL, `venueId` int NOT NULL, `category` varchar(64) NOT NULL, `title` varchar(255) NOT NULL, `content` text NOT NULL, `tags` json DEFAULT ('[]'), `createdAt` timestamp NOT NULL DEFAULT (now()), CONSTRAINT `venue_dna_id` PRIMARY KEY(`id`))",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your TiDB version for the right syntax to use line 1 column 212 near \"'[]'), `createdAt` timestamp NOT NULL DEFAULT (now()), CONSTRAINT `venue_dna_id` PRIMARY KEY(`id`))\""
+  ]
+}

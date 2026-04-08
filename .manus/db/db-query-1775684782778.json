@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `venues` (`id` int AUTO_INCREMENT NOT NULL, `slug` varchar(64) NOT NULL, `name` varchar(255) NOT NULL, `location` varchar(255), `description` text, `createdAt` timestamp NOT NULL DEFAULT (now()), CONSTRAINT `venues_id` PRIMARY KEY(`id`), CONSTRAINT `venues_slug_unique` UNIQUE(`slug`))",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8YkcwCHKeaoCakm.root --database FxMGuZEdHFz8kEGUUru2UP --execute CREATE TABLE IF NOT EXISTS `venues` (`id` int AUTO_INCREMENT NOT NULL, `slug` varchar(64) NOT NULL, `name` varchar(255) NOT NULL, `location` varchar(255), `description` text, `createdAt` timestamp NOT NULL DEFAULT (now()), CONSTRAINT `venues_id` PRIMARY KEY(`id`), CONSTRAINT `venues_slug_unique` UNIQUE(`slug`))",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 625
+}

@@ -27,11 +27,12 @@ const requireUser = t.middleware(async opts => {
 
 export const protectedProcedure = t.procedure.use(requireUser);
 
+// founder_admin only — full access to all data and operations
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
 
-    if (!ctx.user || ctx.user.role !== 'admin') {
+    if (!ctx.user || ctx.user.role !== 'founder_admin') {
       throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     }
 
@@ -43,3 +44,6 @@ export const adminProcedure = t.procedure.use(
     });
   }),
 );
+
+// Alias for semantic clarity in HAUZZ routes
+export const founderProcedure = adminProcedure;
