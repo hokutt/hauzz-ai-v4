@@ -1,5 +1,7 @@
 import { invokeLLM } from "./_core/llm";
 import { agentLog, timedLog } from "./agentLogger";
+import Anthropic from "@anthropic-ai/sdk";
+import { generateImage } from "./_core/imageGeneration";
 import {
   getAllGarments,
   getVenueDnaByVenueId,
@@ -159,6 +161,22 @@ function scoreManufacturability(concept: ConceptCardLLMOutput, garmentOntologyDa
   return Math.max(0, Math.min(1, avg - complexityPenalty));
 }
 
+// ─── Build Concept Image Prompt ─────────────────────────────────────────────
+
+function buildConceptImagePrompt(concept: ConceptCardLLMOutput, intake: IntakeFormInput): string {
+  const palette = concept.palette.slice(0, 4).join(", ");
+  const garments = concept.garmentList.map(g => g.garmentType).join(", ");
+  const materials = concept.materials.slice(0, 3).join(", ");
+  return `Fashion mood board for a festival outfit concept called "${concept.storyName}". ` +
+    `Style: ${concept.storyNarrative} ` +
+    `Garments: ${garments}. ` +
+    `Color palette: ${palette}. ` +
+    `Materials: ${materials}. ` +
+    `Setting: ${intake.venueSlug.replace(/-/g, " ")} electronic music festival, night time, neon lights, euphoric atmosphere. ` +
+    `Aesthetic: high fashion editorial, maximalist rave fashion, otherworldly, ethereal. ` +
+    `Style: professional fashion photography, studio quality, full body shot, dramatic lighting.`;
+}
+
 // ─── Main: Generate Concepts ──────────────────────────────────────────────────
 
 export async function generateConceptsForRequest(
@@ -203,78 +221,104 @@ export async function generateConceptsForRequest(
   });
 
   let rawResponse: string;
+  // ── Claude-first concept generation with built-in LLM fallback ──────────────
+  const anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   try {
-    const llmResponse = await invokeLLM({
-      messages: [
-        {
-          role: "system",
-          content: "You are HAUZZ, a specialist AI fashion designer for festival and rave fashion. Always respond with valid JSON only, no markdown code blocks.",
-        },
-        { role: "user", content: prompt },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "concept_generation_response",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              concepts: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    storyName: { type: "string" },
-                    storyNarrative: { type: "string" },
-                    garmentList: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          garmentType: { type: "string" },
-                          description: { type: "string" },
-                          materials: { type: "array", items: { type: "string" } },
-                          trims: { type: "array", items: { type: "string" } },
-                          constructionNotes: { type: "string" },
-                        },
-                        required: ["garmentType", "description", "materials", "trims", "constructionNotes"],
-                        additionalProperties: false,
-                      },
-                    },
-                    palette: { type: "array", items: { type: "string" } },
-                    materials: { type: "array", items: { type: "string" } },
-                    trims: { type: "array", items: { type: "string" } },
-                    vibeAlignment: { type: "number" },
-                    manufacturabilityScore: { type: "number" },
-                    productionRiskScore: { type: "number" },
-                  },
-                  required: ["storyName", "storyNarrative", "garmentList", "palette", "materials", "trims", "vibeAlignment", "manufacturabilityScore", "productionRiskScore"],
-                  additionalProperties: false,
-                },
-              },
-            },
-            required: ["concepts"],
-            additionalProperties: false,
-          },
-        },
-      },
+    const claudeResponse = await anthropicClient.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 4096,
+      system: "You are HAUZZ, a specialist AI fashion designer for festival and rave fashion. Always respond with valid JSON only, no markdown code blocks, no preamble.",
+      messages: [{ role: "user", content: prompt }],
     });
-
-    const msgContent = llmResponse.choices[0]?.message?.content;
-    rawResponse = typeof msgContent === "string" ? msgContent : "{}";
-  } catch (err) {
+    const claudeText = claudeResponse.content
+      .filter((b) => b.type === "text")
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join("");
+    rawResponse = claudeText || "{}";
     await agentLog({
       designRequestId: requestId,
       stage: "concept_generation",
-      level: "error",
-      message: `LLM call failed: ${err instanceof Error ? err.message : String(err)}`,
+      message: "Claude generated concept response",
+      payload: { model: "claude-3-5-sonnet", chars: claudeText.length },
     });
-    await updateDesignRequestStatus(requestId, "pending");
-    throw err;
+  } catch (claudeErr) {
+    await agentLog({
+      designRequestId: requestId,
+      stage: "concept_generation",
+      level: "warn",
+      message: `Claude failed, falling back to built-in LLM: ${claudeErr instanceof Error ? claudeErr.message : String(claudeErr)}`,
+    });
+    try {
+      const llmResponse = await invokeLLM({
+        messages: [
+          {
+            role: "system",
+            content: "You are HAUZZ, a specialist AI fashion designer for festival and rave fashion. Always respond with valid JSON only, no markdown code blocks.",
+          },
+          { role: "user", content: prompt },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "concept_generation_response",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                concepts: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      storyName: { type: "string" },
+                      storyNarrative: { type: "string" },
+                      garmentList: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            garmentType: { type: "string" },
+                            description: { type: "string" },
+                            materials: { type: "array", items: { type: "string" } },
+                            trims: { type: "array", items: { type: "string" } },
+                            constructionNotes: { type: "string" },
+                          },
+                          required: ["garmentType", "description", "materials", "trims", "constructionNotes"],
+                          additionalProperties: false,
+                        },
+                      },
+                      palette: { type: "array", items: { type: "string" } },
+                      materials: { type: "array", items: { type: "string" } },
+                      trims: { type: "array", items: { type: "string" } },
+                      vibeAlignment: { type: "number" },
+                      manufacturabilityScore: { type: "number" },
+                      productionRiskScore: { type: "number" },
+                    },
+                    required: ["storyName", "storyNarrative", "garmentList", "palette", "materials", "trims", "vibeAlignment", "manufacturabilityScore", "productionRiskScore"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+              required: ["concepts"],
+              additionalProperties: false,
+            },
+          },
+        },
+      });
+      const msgContent = llmResponse.choices[0]?.message?.content;
+      rawResponse = typeof msgContent === "string" ? msgContent : "{}";
+    } catch (err) {
+      await agentLog({
+        designRequestId: requestId,
+        stage: "concept_generation",
+        level: "error",
+        message: `All LLM calls failed: ${err instanceof Error ? err.message : String(err)}`,
+      });
+      await updateDesignRequestStatus(requestId, "pending");
+      throw err;
+    }
   }
-
-  // Step 3: Zod Validation of LLM Output
+    // Step 3: Zod Validation of LLM Output
   let parsed: { concepts: ConceptCardLLMOutput[] };
   try {
     const raw = JSON.parse(rawResponse);
@@ -298,7 +342,7 @@ export async function generateConceptsForRequest(
     payload: { conceptNames: parsed.concepts.map(c => c.storyName) },
   });
 
-  // Step 4: Score manufacturability and persist concept cards
+  // Step 4: Score manufacturability, generate concept image, and persist concept cards
   for (const concept of parsed.concepts) {
     const computedManufacturability = scoreManufacturability(concept, garmentData);
 
@@ -314,6 +358,33 @@ export async function generateConceptsForRequest(
       },
     });
 
+    // Generate AI mood board image for this concept
+    let conceptImageUrl: string | null = null;
+    try {
+      const imagePrompt = buildConceptImagePrompt(concept, intake);
+      await agentLog({
+        designRequestId: requestId,
+        stage: "concept_generation",
+        message: `Generating mood board image for "${concept.storyName}"`,
+        payload: { imagePrompt },
+      });
+      const result = await generateImage({ prompt: imagePrompt });
+      conceptImageUrl = result.url ?? null;
+      await agentLog({
+        designRequestId: requestId,
+        stage: "concept_generation",
+        message: `Mood board image generated for "${concept.storyName}"`,
+        payload: { conceptImageUrl },
+      });
+    } catch (imgErr) {
+      await agentLog({
+        designRequestId: requestId,
+        stage: "concept_generation",
+        level: "warn",
+        message: `Image generation failed for "${concept.storyName}": ${imgErr instanceof Error ? imgErr.message : String(imgErr)}`,
+      });
+    }
+
     await insertConceptCard({
       designRequestId: requestId,
       storyName: concept.storyName,
@@ -326,7 +397,7 @@ export async function generateConceptsForRequest(
       manufacturabilityScore: computedManufacturability,
       productionRiskScore: concept.productionRiskScore,
       generationRound,
-      rawLlmOutput: { response: rawResponse.slice(0, 2000) } as any,
+      rawLlmOutput: { response: rawResponse.slice(0, 2000), conceptImageUrl } as any,
     });
   }
 

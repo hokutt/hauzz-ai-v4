@@ -113,4 +113,12 @@
 
 ## Bug Fixes
 - [x] Fix OAuth callback failure on published site — added detailed error logging, fixed redirect to use frontend origin from state param
-- [ ] Fix users table schema mismatch — Supabase users table column names don't match Drizzle schema (camelCase vs snake_case)
+- [x] Fix users table schema mismatch — rewrote full Drizzle schema with snake_case column names matching Supabase (open_id, login_method, created_at, etc.)
+
+## AI Feature Integrations
+- [x] AI concept image generation — generate mood board image per concept card using built-in image generation API; imageUrl stored in rawLlmOutput.conceptImageUrl and displayed in ConceptCard
+- [x] Voice intake — Whisper transcription endpoint (voice.transcribe), mic button in Design Studio intake form, auto-fill vibe field from speech
+- [x] Real Claude chat — Design Studio chat uses Claude 3.5 Sonnet via aiChat.sendMessage with built-in LLM fallback
+- [x] Claude-powered design agent — concept generation upgraded to Claude 3.5 Sonnet with built-in LLM fallback in designAgent.ts
+- [x] AI vendor email drafting — Claude writes personalized outreach email per vendor via aiChat.draftVendorEmail; UI in Admin Dashboard vendors tab with copy-to-clipboard
+- [x] New test suite: server/hauzz.ai-features.test.ts — 17 tests covering voice/chat/email input schemas and design agent logic (52 total tests passing)

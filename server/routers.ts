@@ -6,6 +6,8 @@ import { intakeRouter } from "./routers/intake";
 import { designRouter } from "./routers/design";
 import { productionRouter } from "./routers/production";
 import { adminRouter } from "./routers/admin";
+import { voiceRouter } from "./routers/voice";
+import { aiChatRouter } from "./routers/aiChat";
 
 export const appRouter = router({
   system: systemRouter,
@@ -24,6 +26,8 @@ export const appRouter = router({
   design: designRouter,       // Concept generation, approval, packet
   production: productionRouter, // Vendor matching, orders, state machine, logs
   admin: adminRouter,         // Founder admin dashboard (full access)
+  voice: voiceRouter,           // Voice intake transcription (Whisper)
+  aiChat: aiChatRouter,         // Claude-powered chat + vendor email drafting
 });
 
 export type AppRouter = typeof appRouter;

@@ -1,18 +1,19 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Sparkles, Zap, Star, RefreshCw, Check, ChevronRight } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, Zap, Star, RefreshCw, Check, ChevronRight, Mic, MicOff, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Streamdown } from "streamdown";
+import { toast } from "sonner";
 
 const RAVE_FASHION = "https://d2xsxph8kpxj0f.cloudfront.net/310519663522663012/FxMGuZEdHFz8kEGUUru2UP/rave-fashion_d9f3949e.jpg";
 const NEBULA_PINK = "https://d2xsxph8kpxj0f.cloudfront.net/310519663522663012/FxMGuZEdHFz8kEGUUru2UP/nebula-pink_118da7c1.jpg";
 const GALAXY_STARS = "https://d2xsxph8kpxj0f.cloudfront.net/310519663522663012/FxMGuZEdHFz8kEGUUru2UP/galaxy-pink-stars_0875c3f7.jpg";
 
-// ── Concept card ──────────────────────────────────────────────────────────────
+// ── Concept card data ─────────────────────────────────────────────────────────
 interface ConceptCardData {
   id: number;
   storyName: string;
@@ -20,6 +21,7 @@ interface ConceptCardData {
   garments: string[];
   palette: string[];
   manufacturabilityScore: number;
+  imageUrl?: string | null;
 }
 
 function ConceptCard({
@@ -35,8 +37,8 @@ function ConceptCard({
   onReject?: () => void;
   index: number;
 }) {
-  const images = [RAVE_FASHION, NEBULA_PINK, GALAXY_STARS];
-  const img = images[index % images.length];
+  const fallbackImages = [RAVE_FASHION, NEBULA_PINK, GALAXY_STARS];
+  const img = concept.imageUrl ?? fallbackImages[index % fallbackImages.length];
 
   return (
     <div
@@ -46,14 +48,28 @@ function ConceptCard({
       onClick={onSelect}
       style={{ minHeight: 280 }}
     >
-      {/* Background image */}
+      {/* Background image — AI-generated mood board or fallback */}
       <img
         src={img}
         alt={concept.storyName}
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        onError={(e) => {
+          // Fallback to static image if AI image fails to load
+          (e.target as HTMLImageElement).src = fallbackImages[index % fallbackImages.length];
+        }}
       />
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+
+      {/* AI image badge */}
+      {concept.imageUrl && (
+        <div
+          className="absolute top-4 right-12 px-2 py-0.5 rounded-full text-xs glass"
+          style={{ color: "oklch(0.85 0.18 340)" }}
+        >
+          AI Generated
+        </div>
+      )}
 
       {/* Selected badge */}
       {isSelected && (
@@ -87,7 +103,11 @@ function ConceptCard({
               key={i}
               className="w-4 h-4 rounded-full border border-border/50"
               title={color}
-              style={{ background: color.startsWith("#") || color.startsWith("rgb") ? color : undefined, backgroundColor: !color.startsWith("#") && !color.startsWith("rgb") ? undefined : color }}
+              style={{
+                background: color.startsWith("#") || color.startsWith("rgb") || color.startsWith("oklch")
+                  ? color
+                  : `hsl(${(i * 60 + 300) % 360}, 70%, 60%)`,
+              }}
             />
           ))}
           <span className="text-xs text-muted-foreground ml-1">{concept.palette.slice(0, 3).join(", ")}</span>
@@ -142,7 +162,6 @@ function ChatMessage({ msg }: { msg: Message }) {
   const isUser = msg.role === "user";
   return (
     <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"} mb-4`}>
-      {/* Avatar */}
       <div
         className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
         style={{
@@ -152,11 +171,8 @@ function ChatMessage({ msg }: { msg: Message }) {
       >
         {isUser ? "U" : <Sparkles className="w-4 h-4" />}
       </div>
-      {/* Bubble */}
       <div
-        className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-          isUser ? "glass" : "glass"
-        }`}
+        className="max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed glass"
         style={{
           borderColor: isUser ? "oklch(0.55 0.18 280 / 0.3)" : "oklch(0.72 0.22 340 / 0.2)",
         }}
@@ -174,7 +190,72 @@ function ChatMessage({ msg }: { msg: Message }) {
   );
 }
 
-// ── Intake form (step 1 of chat) ──────────────────────────────────────────────
+// ── Voice recorder hook ───────────────────────────────────────────────────────
+function useVoiceRecorder(onTranscript: (text: string) => void) {
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const transcribeMutation = trpc.voice.transcribe.useMutation();
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+
+        // Convert to base64
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64 = (reader.result as string).split(",")[1];
+          setIsTranscribing(true);
+          try {
+            const result = await transcribeMutation.mutateAsync({
+              audioBase64: base64,
+              mimeType: "audio/webm",
+              language: "en",
+              prompt: "Festival fashion description: vibe, colors, garments, aesthetic",
+            });
+            if (result.text) {
+              onTranscript(result.text);
+              toast.success("Voice transcribed!");
+            }
+          } catch (err: any) {
+            toast.error(`Transcription failed: ${err?.message ?? "Unknown error"}`);
+          } finally {
+            setIsTranscribing(false);
+          }
+        };
+        reader.readAsDataURL(blob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch {
+      toast.error("Microphone access denied. Please allow microphone access.");
+    }
+  }, [transcribeMutation, onTranscript]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  }, [isRecording]);
+
+  return { isRecording, isTranscribing, startRecording, stopRecording };
+}
+
+// ── Intake form ───────────────────────────────────────────────────────────────
 function IntakeStep({
   onSubmit,
 }: {
@@ -183,6 +264,13 @@ function IntakeStep({
   const [vibe, setVibe] = useState("");
   const [colors, setColors] = useState("");
   const [budget, setBudget] = useState("$500–$1000");
+
+  const { isRecording, isTranscribing, startRecording, stopRecording } = useVoiceRecorder(
+    (text) => {
+      // Auto-fill vibe from voice transcription
+      setVibe((prev) => (prev ? `${prev}, ${text}` : text));
+    }
+  );
 
   return (
     <div className="p-6 space-y-4">
@@ -194,19 +282,51 @@ function IntakeStep({
           <Sparkles className="w-6 h-6" style={{ color: "oklch(0.85 0.18 340)" }} />
         </div>
         <h3 className="font-display font-bold text-lg text-foreground">Start Your Design</h3>
-        <p className="text-xs text-muted-foreground mt-1">Tell the AI about your vibe</p>
+        <p className="text-xs text-muted-foreground mt-1">Tell the AI about your vibe — type or speak</p>
       </div>
 
       <div>
         <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
           Vibe Keywords
         </label>
-        <Input
-          value={vibe}
-          onChange={(e) => setVibe(e.target.value)}
-          placeholder="electric, cosmic, warrior, ethereal..."
-          className="glass border-border/50 text-foreground placeholder:text-muted-foreground/50 rounded-xl"
-        />
+        <div className="flex gap-2">
+          <Input
+            value={vibe}
+            onChange={(e) => setVibe(e.target.value)}
+            placeholder="electric, cosmic, warrior, ethereal..."
+            className="flex-1 glass border-border/50 text-foreground placeholder:text-muted-foreground/50 rounded-xl"
+          />
+          {/* Voice recorder button */}
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={isTranscribing}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
+              isRecording ? "animate-pulse" : ""
+            }`}
+            style={{
+              background: isRecording
+                ? "oklch(0.65 0.22 20)"
+                : isTranscribing
+                ? "oklch(0.55 0.10 300 / 0.5)"
+                : "oklch(0.72 0.22 340 / 0.15)",
+              border: `1px solid ${isRecording ? "oklch(0.65 0.22 20 / 0.5)" : "oklch(0.72 0.22 340 / 0.3)"}`,
+            }}
+            title={isRecording ? "Stop recording" : "Speak your vibe"}
+          >
+            {isTranscribing ? (
+              <Loader2 className="w-4 h-4 animate-spin" style={{ color: "oklch(0.85 0.18 340)" }} />
+            ) : isRecording ? (
+              <MicOff className="w-4 h-4" style={{ color: "oklch(0.97 0.01 300)" }} />
+            ) : (
+              <Mic className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
+            )}
+          </button>
+        </div>
+        {isRecording && (
+          <p className="text-xs mt-1.5 animate-pulse" style={{ color: "oklch(0.65 0.22 20)" }}>
+            Recording... click mic to stop
+          </p>
+        )}
       </div>
 
       <div>
@@ -265,7 +385,7 @@ export default function DesignStudio() {
     {
       role: "assistant",
       content:
-        "Welcome to the HAUZZ.AI Design Studio ✨\n\nI'm your AI design agent. I'll build custom festival looks based on EDC's venue DNA — electric energy, cosmic vibes, and garments that move with you.\n\nTell me about your vibe to get started.",
+        "Welcome to the HAUZZ.AI Design Studio ✨\n\nI'm your AI design agent — powered by Claude. I'll build custom festival looks based on EDC's venue DNA — electric energy, cosmic vibes, and garments that move with you.\n\nTell me about your vibe to get started. You can type or **speak** using the mic button.",
       timestamp: new Date(),
     },
   ]);
@@ -273,21 +393,83 @@ export default function DesignStudio() {
   const [concepts, setConcepts] = useState<ConceptCardData[]>([]);
   const [selectedConcept, setSelectedConcept] = useState<number | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const [showIntake, setShowIntake] = useState(true);
   const [requestId, setRequestId] = useState<number | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const submitIntakeMutation = trpc.intake.submit.useMutation();
   const selectConceptMutation = trpc.design.selectConcept.useMutation();
   const rejectConceptMutation = trpc.design.rejectConcept.useMutation();
+  const sendMessageMutation = trpc.aiChat.sendMessage.useMutation();
+  const utils = trpc.useUtils();
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
+
   const addMessage = (role: "user" | "assistant", content: string) => {
     setMessages((prev) => [...prev, { role, content, timestamp: new Date() }]);
   };
+
+  // Poll for concepts after intake submission
+  const startPollingForConcepts = useCallback((reqId: number) => {
+    let attempts = 0;
+    const maxAttempts = 12; // 60 seconds max
+
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+
+    pollIntervalRef.current = setInterval(async () => {
+      attempts++;
+      try {
+        const data = await utils.design.getConcepts.fetch({ designRequestId: reqId });
+        if (data && data.length > 0) {
+          clearInterval(pollIntervalRef.current!);
+          pollIntervalRef.current = null;
+
+          // Map DB concept cards to UI format
+          const mapped: ConceptCardData[] = data.map((c) => {
+            const raw = c.rawLlmOutput as Record<string, unknown> | null;
+            const imageUrl = raw?.conceptImageUrl as string | null | undefined;
+            return {
+              id: c.id,
+              storyName: c.storyName,
+              storyDescription: c.storyNarrative,
+              garments: (c.garmentList as Array<{ garmentType: string }>).map((g) => g.garmentType),
+              palette: c.palette as string[],
+              manufacturabilityScore: Math.round(c.manufacturabilityScore * 100),
+              imageUrl: imageUrl ?? null,
+            };
+          });
+
+          setConcepts(mapped);
+          setIsGenerating(false);
+          addMessage(
+            "assistant",
+            `Your **${mapped.length} concept directions** are ready! 🎨\n\nEach one is built from EDC's venue DNA — check out the visual panel on the left. Select the direction that speaks to your soul, or reject any that don't resonate.`
+          );
+        } else if (attempts >= maxAttempts) {
+          clearInterval(pollIntervalRef.current!);
+          pollIntervalRef.current = null;
+          setIsGenerating(false);
+          addMessage(
+            "assistant",
+            "Concept generation is taking longer than expected. Your request is queued — refresh the page in a minute to see your concepts."
+          );
+        }
+      } catch {
+        // Silently retry
+      }
+    }, 5000);
+  }, [utils.design.getConcepts]);
 
   const handleIntakeSubmit = async (data: { vibeKeywords: string; colors: string; budget: string }) => {
     if (!isAuthenticated) {
@@ -297,11 +479,10 @@ export default function DesignStudio() {
 
     setShowIntake(false);
     addMessage("user", `Vibe: ${data.vibeKeywords} | Colors: ${data.colors} | Budget: ${data.budget}`);
-    addMessage("assistant", "Perfect. Scanning EDC's venue DNA and building your concepts now... This usually takes 15–30 seconds.");
+    addMessage("assistant", "Perfect. Scanning EDC's venue DNA and building your concepts with Claude... This usually takes 20–40 seconds.");
     setIsGenerating(true);
 
     try {
-      // Submit intake (triggers async concept generation server-side)
       const intakeResult = await submitIntakeMutation.mutateAsync({
         venueSlug: "edc-las-vegas",
         eventDate: "2025-05-16",
@@ -317,24 +498,13 @@ export default function DesignStudio() {
       const reqId = intakeResult.designRequestId;
       setRequestId(reqId);
 
-      // Poll for concepts (server generates them async)
-      addMessage("assistant", "Intake submitted. Concepts are being generated — checking in 5 seconds...");
-      await new Promise((r) => setTimeout(r, 5000));
+      addMessage("assistant", "Intake locked in. Claude is generating your story-led concept directions with AI mood board images — I'll update you when they're ready.");
 
-      // Fetch generated concepts
-      const conceptsData = await new Promise<any[]>((resolve) => {
-        // We'll use a direct tRPC query call via utils
-        resolve([]);
-      });
-
-      addMessage(
-        "assistant",
-        `Your design request is in! Concepts are being generated based on EDC's venue DNA.\n\nCheck back in a moment — they'll appear in the visual panel on the left. You can also refresh the page to see them.\n\n**Request ID:** ${reqId}`
-      );
+      // Start polling for concepts
+      startPollingForConcepts(reqId);
     } catch (err: any) {
-      addMessage("assistant", `Something went wrong generating concepts: ${err?.message ?? "Unknown error"}. Try again or describe your vibe differently.`);
-    } finally {
       setIsGenerating(false);
+      addMessage("assistant", `Something went wrong: ${err?.message ?? "Unknown error"}. Try again or describe your vibe differently.`);
     }
   };
 
@@ -375,18 +545,33 @@ export default function DesignStudio() {
     }
   };
 
+  // Real Claude-powered chat
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isGenerating) return;
+    if (!inputValue.trim() || isChatLoading) return;
     const msg = inputValue.trim();
     setInputValue("");
     addMessage("user", msg);
+    setIsChatLoading(true);
 
-    setIsGenerating(true);
     try {
-      // Simple conversational response using LLM
-      addMessage("assistant", "Got it — I'm taking note of that. Once you've selected a concept direction, I can refine the design based on your feedback.");
+      // Build conversation history for Claude
+      const history = messages.slice(-10).map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+      history.push({ role: "user", content: msg });
+
+      const result = await sendMessageMutation.mutateAsync({
+        messages: history,
+        designRequestId: requestId ?? undefined,
+        venueSlug: "edc-las-vegas",
+      });
+
+      addMessage("assistant", result.text);
+    } catch (err: any) {
+      addMessage("assistant", `I'm having a moment — try again. ${err?.message ? `(${err.message})` : ""}`);
     } finally {
-      setIsGenerating(false);
+      setIsChatLoading(false);
     }
   };
 
@@ -448,6 +633,8 @@ export default function DesignStudio() {
                   setConcepts([]);
                   setSelectedConcept(null);
                   setShowIntake(true);
+                  setRequestId(null);
+                  if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
                   addMessage("assistant", "Starting fresh! Tell me your new vibe.");
                 }}
               >
@@ -461,7 +648,6 @@ export default function DesignStudio() {
           <div className="flex-1 overflow-y-auto p-6">
             {concepts.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center">
-                {/* Animated placeholder */}
                 <div className="relative w-48 h-48 mb-8">
                   <div
                     className="absolute inset-0 rounded-full animate-pulse-glow"
@@ -483,7 +669,7 @@ export default function DesignStudio() {
                 </h3>
                 <p className="text-muted-foreground text-sm max-w-xs">
                   {isGenerating
-                    ? "Scanning EDC venue DNA and building your story-led directions..."
+                    ? "Claude is scanning EDC venue DNA and building your story-led directions with AI mood boards..."
                     : "Use the chat to describe your vibe and the AI will generate 2–4 concept directions."}
                 </p>
                 {isGenerating && (
@@ -569,7 +755,7 @@ export default function DesignStudio() {
               <span className="font-display font-semibold text-sm text-foreground">HAUZZ Design Agent</span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-xs text-muted-foreground">Online · EDC DNA loaded</span>
+                <span className="text-xs text-muted-foreground">Claude · EDC DNA loaded</span>
               </div>
             </div>
           </div>
@@ -579,7 +765,7 @@ export default function DesignStudio() {
             {messages.map((msg, i) => (
               <ChatMessage key={i} msg={msg} />
             ))}
-            {isGenerating && (
+            {(isGenerating || isChatLoading) && (
               <div className="flex gap-3 mb-4">
                 <div
                   className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
@@ -613,15 +799,19 @@ export default function DesignStudio() {
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
                   placeholder="Refine your design, ask questions..."
                   className="flex-1 glass border-border/50 text-foreground placeholder:text-muted-foreground/50 rounded-xl"
-                  disabled={isGenerating}
+                  disabled={isChatLoading || isGenerating}
                 />
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!inputValue.trim() || isGenerating}
+                  disabled={!inputValue.trim() || isChatLoading || isGenerating}
                   className="rounded-xl px-4"
                   style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
                 >
-                  <Send className="w-4 h-4" />
+                  {isChatLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
                 </Button>
               </div>
             )}

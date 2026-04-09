@@ -3,7 +3,8 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, LayoutDashboard, Users, Package, Truck, Activity,
-  ChevronRight, RefreshCw, Zap, Star, CheckCircle, Clock, AlertCircle
+  ChevronRight, RefreshCw, Zap, Star, CheckCircle, Clock, AlertCircle,
+  Mail, Loader2, Copy, Check
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -238,6 +239,205 @@ function PipelineDetail({ requestId, onClose }: { requestId: number; onClose: ()
   );
 }
 
+// ── Vendor email draft modal ─────────────────────────────────────────────────
+function VendorEmailModal({
+  vendorId,
+  vendorName,
+  onClose,
+}: {
+  vendorId: number;
+  vendorName: string;
+  onClose: () => void;
+}) {
+  const [designRequestId, setDesignRequestId] = useState("");
+  const [designPacketId, setDesignPacketId] = useState("");
+  const [emailDraft, setEmailDraft] = useState<string | null>(null);
+  const [subject, setSubject] = useState("");
+  const [vendorEmail, setVendorEmail] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const draftMutation = trpc.aiChat.draftVendorEmail.useMutation({
+    onSuccess: (data) => {
+      setEmailDraft(data.emailDraft);
+      setSubject(data.subject);
+      setVendorEmail(data.vendorEmail ?? "");
+    },
+  });
+
+  const handleCopy = () => {
+    if (!emailDraft) return;
+    navigator.clipboard.writeText(emailDraft);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "oklch(0.06 0.02 300 / 0.85)", backdropFilter: "blur(20px)" }}
+    >
+      <div className="glass-strong rounded-3xl w-full max-w-xl max-h-[85vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Mail className="w-5 h-5" style={{ color: "oklch(0.72 0.22 340)" }} />
+            <h3 className="font-display font-bold text-base text-foreground">
+              Draft Email — {vendorName}
+            </h3>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onClose} className="text-muted-foreground hover:text-foreground">✕</Button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {!emailDraft ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Enter the design request and packet IDs to generate a personalized outreach email for this vendor.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Design Request ID</label>
+                  <input
+                    type="number"
+                    value={designRequestId}
+                    onChange={(e) => setDesignRequestId(e.target.value)}
+                    placeholder="e.g. 1"
+                    className="w-full glass rounded-xl px-3 py-2 text-sm text-foreground bg-transparent border border-border/50 focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Design Packet ID</label>
+                  <input
+                    type="number"
+                    value={designPacketId}
+                    onChange={(e) => setDesignPacketId(e.target.value)}
+                    placeholder="e.g. 1"
+                    className="w-full glass rounded-xl px-3 py-2 text-sm text-foreground bg-transparent border border-border/50 focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+              </div>
+              {draftMutation.error && (
+                <p className="text-xs" style={{ color: "oklch(0.65 0.22 20)" }}>
+                  {draftMutation.error.message}
+                </p>
+              )}
+              <Button
+                className="w-full font-semibold"
+                style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
+                disabled={!designRequestId || !designPacketId || draftMutation.isPending}
+                onClick={() =>
+                  draftMutation.mutate({
+                    vendorId,
+                    designRequestId: Number(designRequestId),
+                    designPacketId: Number(designPacketId),
+                  })
+                }
+              >
+                {draftMutation.isPending ? (
+                  <><Loader2 className="mr-2 w-4 h-4 animate-spin" />Drafting with Claude...</>
+                ) : (
+                  <><Mail className="mr-2 w-4 h-4" />Generate Email Draft</>
+                )}
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="glass rounded-2xl p-4 space-y-2">
+                <div>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">To</span>
+                  <p className="text-sm text-foreground mt-0.5">{vendorEmail || "(no email on file)"}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Subject</span>
+                  <p className="text-sm text-foreground mt-0.5">{subject}</p>
+                </div>
+              </div>
+              <div className="glass rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Email Body</span>
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-all"
+                    style={{ color: copied ? "oklch(0.72 0.22 160)" : "oklch(0.72 0.22 340)" }}
+                  >
+                    {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+                <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed font-sans">{emailDraft}</pre>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full text-sm"
+                onClick={() => { setEmailDraft(null); setDesignRequestId(""); setDesignPacketId(""); }}
+              >
+                Draft Another
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Vendors tab with email drafting ──────────────────────────────────────────
+function VendorsTab({ allVendors }: { allVendors: any[] | undefined }) {
+  const [emailModalVendor, setEmailModalVendor] = useState<{ id: number; name: string } | null>(null);
+
+  return (
+    <div className="glass rounded-3xl p-6">
+      <h3 className="font-display font-bold text-base text-foreground mb-4">Vendor Profiles</h3>
+      {!allVendors?.length ? (
+        <p className="text-muted-foreground text-sm">No vendors loaded.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {allVendors.map((v: any) => (
+            <div key={v.id} className="glass rounded-2xl p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h4 className="font-display font-bold text-base text-foreground">{v.name}</h4>
+                  <p className="text-xs text-muted-foreground">{v.geography} · {v.priceBand}</p>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-lg" style={{ color: "oklch(0.72 0.22 340)" }}>{v.reliabilityScore}</div>
+                  <div className="text-xs text-muted-foreground">reliability</div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {(v.capabilityTags as string[])?.slice(0, 4).map((tag: string) => (
+                  <span key={tag} className="glass px-2 py-0.5 rounded-full text-xs text-muted-foreground">{tag}</span>
+                ))}
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span>MOQ: {v.moq}</span>
+                  <span>Turnaround: {v.turnaroundDays}d</span>
+                </div>
+                <Button
+                  size="sm"
+                  className="text-xs font-semibold gap-1.5 flex-shrink-0"
+                  style={{ background: "oklch(0.72 0.22 340 / 0.15)", color: "oklch(0.85 0.18 340)", border: "1px solid oklch(0.72 0.22 340 / 0.3)" }}
+                  onClick={() => setEmailModalVendor({ id: v.id, name: v.name })}
+                >
+                  <Mail className="w-3 h-3" />
+                  Draft Email
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {emailModalVendor && (
+        <VendorEmailModal
+          vendorId={emailModalVendor.id}
+          vendorName={emailModalVendor.name}
+          onClose={() => setEmailModalVendor(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const [, navigate] = useLocation();
@@ -448,38 +648,7 @@ export default function AdminDashboard() {
 
         {/* ── Vendors Tab ── */}
         {activeTab === "vendors" && (
-          <div className="glass rounded-3xl p-6">
-            <h3 className="font-display font-bold text-base text-foreground mb-4">Vendor Profiles</h3>
-            {!allVendors?.length ? (
-              <p className="text-muted-foreground text-sm">No vendors loaded.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {allVendors.map((v: any) => (
-                  <div key={v.id} className="glass rounded-2xl p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h4 className="font-display font-bold text-base text-foreground">{v.name}</h4>
-                        <p className="text-xs text-muted-foreground">{v.geography} · {v.priceBand}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-lg" style={{ color: "oklch(0.72 0.22 340)" }}>{v.reliabilityScore}</div>
-                        <div className="text-xs text-muted-foreground">reliability</div>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      {(v.capabilityTags as string[])?.slice(0, 4).map((tag: string) => (
-                        <span key={tag} className="glass px-2 py-0.5 rounded-full text-xs text-muted-foreground">{tag}</span>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>MOQ: {v.moq}</span>
-                      <span>Turnaround: {v.turnaroundDays}d</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <VendorsTab allVendors={allVendors} />
         )}
 
         {/* ── Logs Tab ── */}
