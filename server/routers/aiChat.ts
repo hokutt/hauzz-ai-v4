@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { protectedProcedure, founderProcedure, router } from "../_core/trpc";
+import { protectedProcedure, founderProcedure, publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
@@ -18,7 +18,7 @@ export const aiChatRouter = router({
    * Uses Claude for richer, more creative responses.
    * Returns full response (streaming handled via SSE endpoint).
    */
-  sendMessage: protectedProcedure
+  sendMessage: publicProcedure
     .input(
       z.object({
         messages: z.array(
