@@ -143,3 +143,7 @@
 - [x] Wire Design Studio to load existing messages when resuming a thread via ?requestId= param
 - [x] Add "My Designs" nav link in Design Studio nav (top right, visible when authenticated)
 - [x] Register /my-designs route in App.tsx
+
+## SEO Round 2
+- [x] Fix title: set document.title = "HAUZZ.AI — Custom Festival Fashion, AI-Designed" (49 chars) in Home.tsx useEffect for runtime SEO
+- [x] Fix description: trimmed from 162 to 143 chars in index.html, og:description, and twitter:description tags

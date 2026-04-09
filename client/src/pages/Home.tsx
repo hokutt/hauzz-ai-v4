@@ -99,6 +99,13 @@ export default function Home() {
   const [scrollY, setScrollY] = useState(0);
   const { user, isAuthenticated } = useAuth();
 
+  // Set page title and description at runtime so SEO scanners pick up the correct values
+  useEffect(() => {
+    document.title = "HAUZZ.AI — Custom Festival Fashion, AI-Designed";
+    const desc = document.querySelector('meta[name="description"]');
+    if (desc) desc.setAttribute("content", "HAUZZ.AI builds custom festival outfits powered by AI. Describe your vibe, pick your festival, and get a one-of-a-kind garment made end-to-end.");
+  }, []);
+
   useEffect(() => {
     const onScroll = () => setScrollY(window.scrollY);
     window.addEventListener("scroll", onScroll, { passive: true });
