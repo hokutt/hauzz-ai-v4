@@ -6,7 +6,7 @@ export const IntakeFormSchema = z.object({
   venueSlug: z.string().min(1, "Venue is required"),
   eventDate: z.string().optional(),
   vibeKeywords: z.array(z.string()).min(1, "At least one vibe keyword required"),
-  garmentPreferences: z.array(z.string()).min(1, "At least one garment preference required"),
+  garmentPreferences: z.array(z.string()).default([]),
   comfortCoverage: z.enum(["minimal", "moderate", "full"]),
   colors: z.array(z.string()).min(1, "At least one color required"),
   avoidList: z.array(z.string()).default([]),
