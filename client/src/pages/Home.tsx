@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight, Zap, Star } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
 
 const EDC_AERIAL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663522663012/FxMGuZEdHFz8kEGUUru2UP/edc-aerial_28453b73.jpg";
 const EDC_STAGE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663522663012/FxMGuZEdHFz8kEGUUru2UP/edc-stage_339dd238.jpg";
@@ -95,6 +97,7 @@ const features = [
 export default function Home() {
   const [, navigate] = useLocation();
   const [scrollY, setScrollY] = useState(0);
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrollY(window.scrollY);
@@ -182,6 +185,17 @@ export default function Home() {
           >
             Festival Map
           </Button>
+          {isAuthenticated ? (
+            <span className="text-xs text-muted-foreground px-3">{user?.name}</span>
+          ) : (
+            <Button
+              variant="ghost"
+              className="text-muted-foreground hover:text-foreground text-sm"
+              onClick={() => window.location.href = getLoginUrl()}
+            >
+              Sign In
+            </Button>
+          )}
           <Button
             className="glow-pink text-sm font-semibold"
             style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}

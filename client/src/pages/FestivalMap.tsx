@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, MapPin, Calendar, Users, Zap } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
 
 const GALAXY_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663522663012/FxMGuZEdHFz8kEGUUru2UP/galaxy-purple_7942970a.jpg";
 const EDC_WIDE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663522663012/FxMGuZEdHFz8kEGUUru2UP/edc-wide_e16d4f27.webp";
@@ -275,6 +277,7 @@ function VenuePanel({ onDesign }: { onDesign: () => void }) {
 export default function FestivalMap() {
   const [, navigate] = useLocation();
   const [selected, setSelected] = useState(false);
+  const { user, isAuthenticated } = useAuth();
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
@@ -306,14 +309,28 @@ export default function FestivalMap() {
           <div className="w-6 h-6 rounded-full animate-pulse-glow" style={{ background: "oklch(0.72 0.22 340)" }} />
           <span className="font-display font-bold text-base text-foreground">HAUZZ.AI</span>
         </div>
-        <Button
-          size="sm"
-          className="font-semibold text-xs"
-          style={{ background: "oklch(0.72 0.22 340 / 0.15)", color: "oklch(0.85 0.18 340)", border: "1px solid oklch(0.72 0.22 340 / 0.3)" }}
-          onClick={() => navigate("/design-studio")}
-        >
-          Design Studio
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAuthenticated ? (
+            <span className="text-xs text-muted-foreground">{user?.name}</span>
+          ) : (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="font-semibold text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => window.location.href = getLoginUrl()}
+            >
+              Sign In
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className="font-semibold text-xs"
+            style={{ background: "oklch(0.72 0.22 340 / 0.15)", color: "oklch(0.85 0.18 340)", border: "1px solid oklch(0.72 0.22 340 / 0.3)" }}
+            onClick={() => navigate("/design-studio")}
+          >
+            Design Studio
+          </Button>
+        </div>
       </nav>
 
       {/* ── Page title ── */}

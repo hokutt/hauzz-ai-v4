@@ -256,14 +256,28 @@ function useVoiceRecorder(onTranscript: (text: string) => void) {
 }
 
 // ── Intake form ───────────────────────────────────────────────────────────────
+const GARMENT_OPTIONS = [
+  "Top / Bralette",
+  "Bottoms / Shorts",
+  "Full Bodysuit",
+  "Skirt / Skort",
+  "Jacket / Wrap",
+  "Accessories",
+];
+
 function IntakeStep({
   onSubmit,
 }: {
-  onSubmit: (data: { vibeKeywords: string; colors: string; budget: string }) => void;
+  onSubmit: (data: { vibeKeywords: string; colors: string; budget: string; garmentPreferences: string[] }) => void;
 }) {
   const [vibe, setVibe] = useState("");
   const [colors, setColors] = useState("");
-  const [budget, setBudget] = useState("$500–$1000");
+  const [budget, setBudget] = useState("$500\u20131000");
+  const [garments, setGarments] = useState<string[]>([]);
+
+  const toggleGarment = (g: string) => {
+    setGarments((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]);
+  };
 
   const { isRecording, isTranscribing, startRecording, stopRecording } = useVoiceRecorder(
     (text) => {
@@ -364,11 +378,36 @@ function IntakeStep({
         </div>
       </div>
 
+      <div>
+        <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
+          Garment Types <span style={{ color: "oklch(0.72 0.22 340)" }}>*</span>
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {GARMENT_OPTIONS.map((g) => (
+            <button
+              key={g}
+              onClick={() => toggleGarment(g)}
+              className="py-1.5 px-3 rounded-xl text-xs font-medium transition-all glass hover:border-primary/30"
+              style={{
+                background: garments.includes(g) ? "oklch(0.72 0.22 340)" : undefined,
+                color: garments.includes(g) ? "oklch(0.06 0.02 300)" : "oklch(0.65 0.06 300)",
+                border: garments.includes(g) ? "1px solid oklch(0.72 0.22 340)" : undefined,
+              }}
+            >
+              {g}
+            </button>
+          ))}
+        </div>
+        {garments.length === 0 && (
+          <p className="text-xs mt-1" style={{ color: "oklch(0.65 0.22 20)" }}>Select at least one garment type</p>
+        )}
+      </div>
+
       <Button
         className="w-full glow-pink font-bold py-5 rounded-2xl text-sm mt-2"
         style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
-        disabled={!vibe.trim()}
-        onClick={() => onSubmit({ vibeKeywords: vibe, colors, budget })}
+        disabled={!vibe.trim() || garments.length === 0}
+        onClick={() => onSubmit({ vibeKeywords: vibe, colors, budget, garmentPreferences: garments })}
       >
         Generate Concepts
         <Sparkles className="ml-2 w-4 h-4" />
@@ -471,7 +510,7 @@ export default function DesignStudio() {
     }, 5000);
   }, [utils.design.getConcepts]);
 
-  const handleIntakeSubmit = async (data: { vibeKeywords: string; colors: string; budget: string }) => {
+  const handleIntakeSubmit = async (data: { vibeKeywords: string; colors: string; budget: string; garmentPreferences: string[] }) => {
     if (!isAuthenticated) {
       addMessage("assistant", "You'll need to sign in to generate designs. [Click here to sign in](" + getLoginUrl() + ")");
       return;
@@ -487,8 +526,8 @@ export default function DesignStudio() {
         venueSlug: "edc-las-vegas",
         eventDate: "2025-05-16",
         vibeKeywords: data.vibeKeywords.split(",").map((s) => s.trim()),
-        garmentPreferences: [],
-        colors: data.colors.split(",").map((s) => s.trim()),
+        garmentPreferences: data.garmentPreferences,
+        colors: data.colors.trim() ? data.colors.split(",").map((s) => s.trim()).filter(Boolean) : ["open to suggestions"],
         avoidList: [],
         budgetBand: data.budget,
         bodyNotes: "",
