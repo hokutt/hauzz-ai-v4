@@ -266,6 +266,19 @@ export type OrderStageEvent = {
 export type ProductionOrder = typeof productionOrders.$inferSelect;
 export type InsertProductionOrder = typeof productionOrders.$inferInsert;
 
+// ─── Chat Messages ───────────────────────────────────────────────────────────
+
+export const chatMessages = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  designRequestId: integer("design_request_id").notNull().references(() => designRequests.id, { onDelete: "cascade" }),
+  role: varchar("role", { length: 16 }).notNull(), // 'user' | 'assistant'
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = typeof chatMessages.$inferInsert;
+
 // ─── Agent Logs ───────────────────────────────────────────────────────────────
 
 export const agentLogs = pgTable("agent_logs", {

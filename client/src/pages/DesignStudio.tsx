@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useLocation } from "wouter";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send, Sparkles, Zap, Star, RefreshCw, Check, ChevronRight, Mic, MicOff, Loader2, Package, Palette, Scissors, AlertTriangle, FileText } from "lucide-react";
@@ -283,7 +283,16 @@ function GenerateConceptsBar({
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function DesignStudio() {
   const [, navigate] = useLocation();
+  const search = useSearch();
   const { user, isAuthenticated } = useAuth();
+
+  // Read requestId from URL query param (e.g. /design-studio?requestId=42)
+  const urlRequestId = useMemo(() => {
+    const params = new URLSearchParams(search);
+    const v = params.get("requestId");
+    return v ? parseInt(v, 10) : null;
+  }, [search]);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -297,9 +306,10 @@ export default function DesignStudio() {
   const [selectedConcept, setSelectedConcept] = useState<number | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [requestId, setRequestId] = useState<number | null>(null);
+  const [requestId, setRequestId] = useState<number | null>(urlRequestId);
   const [showGenerateBar, setShowGenerateBar] = useState(false);
   const [showPacketModal, setShowPacketModal] = useState(false);
+  const [threadLoaded, setThreadLoaded] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Track how many user messages sent (show generate bar after 2+)
@@ -309,11 +319,61 @@ export default function DesignStudio() {
   const selectConceptMutation = trpc.design.selectConcept.useMutation();
   const rejectConceptMutation = trpc.design.rejectConcept.useMutation();
   const sendMessageMutation = trpc.aiChat.sendMessage.useMutation();
+  const saveMessageMutation = trpc.design.saveMessage.useMutation();
   const packetQuery = trpc.design.getPacket.useQuery(
     { designRequestId: requestId! },
     { enabled: showPacketModal && requestId !== null }
   );
   const utils = trpc.useUtils();
+
+  // Load thread history when resuming from URL requestId
+  const threadMessagesQuery = trpc.design.getThreadMessages.useQuery(
+    { designRequestId: requestId! },
+    { enabled: isAuthenticated && requestId !== null && !threadLoaded }
+  );
+  const threadConceptsQuery = trpc.design.getConcepts.useQuery(
+    { designRequestId: requestId! },
+    { enabled: isAuthenticated && requestId !== null && !threadLoaded }
+  );
+
+  useEffect(() => {
+    if (threadLoaded || requestId === null) return;
+    if (threadMessagesQuery.data && threadConceptsQuery.data) {
+      const savedMsgs = threadMessagesQuery.data;
+      const savedConcepts = threadConceptsQuery.data;
+      if (savedMsgs.length > 0) {
+        setMessages([
+          {
+            role: "assistant",
+            content: "Welcome back! Here's your previous session — pick up right where you left off.",
+            timestamp: new Date(),
+          },
+          ...savedMsgs.map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            timestamp: new Date(m.createdAt),
+          })),
+        ]);
+        userMessageCountRef.current = savedMsgs.filter((m) => m.role === "user").length;
+      }
+      if (savedConcepts.length > 0) {
+        setConcepts(
+          savedConcepts.map((c) => ({
+            id: c.id,
+            storyName: c.storyName,
+            storyDescription: c.storyNarrative,
+            garments: (c.garmentList as Array<{ garmentType: string }>).map((g) => g.garmentType),
+            palette: c.palette as string[],
+            manufacturabilityScore: Math.round(c.manufacturabilityScore * 100),
+            imageUrl: (c.rawLlmOutput as any)?.conceptImageUrl ?? null,
+          }))
+        );
+        const selected = savedConcepts.find((c) => c.isSelected);
+        if (selected) setSelectedConcept(selected.id);
+      }
+      setThreadLoaded(true);
+    }
+  }, [threadMessagesQuery.data, threadConceptsQuery.data, requestId, threadLoaded]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -494,6 +554,12 @@ export default function DesignStudio() {
 
       addMessage("assistant", result.text);
 
+      // Persist both messages to DB if we have a requestId and user is authenticated
+      if (requestId && isAuthenticated) {
+        saveMessageMutation.mutate({ designRequestId: requestId, role: "user", content: msg });
+        saveMessageMutation.mutate({ designRequestId: requestId, role: "assistant", content: result.text });
+      }
+
       // Show generate bar after user has shared enough context (2+ messages)
       if (userMessageCountRef.current >= 2 && concepts.length === 0 && !isGenerating) {
         setShowGenerateBar(true);
@@ -529,7 +595,16 @@ export default function DesignStudio() {
         </div>
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
-            <span className="text-xs text-muted-foreground">{user?.name}</span>
+            <>
+              <button
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+                onClick={() => navigate("/my-designs")}
+              >
+                My Designs
+              </button>
+              <span className="text-xs text-muted-foreground opacity-40">·</span>
+              <span className="text-xs text-muted-foreground">{user?.name}</span>
+            </>
           ) : (
             <Button
               size="sm"

@@ -5,6 +5,7 @@ import {
   InsertUser,
   agentLogs,
   approvalHistory,
+  chatMessages,
   conceptCards,
   designPackets,
   designRequests,
@@ -16,7 +17,7 @@ import {
   venueDna,
   venues,
 } from "../drizzle/schema";
-import type { InsertDesignRequest, InsertConceptCard } from "../drizzle/schema";
+import type { InsertDesignRequest, InsertConceptCard, InsertChatMessage } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -333,6 +334,49 @@ export async function updateProductionOrderStage(
     stageHistory: stageHistory as any,
     notes: notes ?? undefined,
   }).where(eq(productionOrders.id, orderId));
+}
+
+// ─── Chat Messages ───────────────────────────────────────────────────────────
+
+export async function saveChatMessage(data: InsertChatMessage) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [row] = await db.insert(chatMessages).values(data).returning();
+  return row;
+}
+
+export async function getChatMessagesByRequestId(designRequestId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(chatMessages)
+    .where(eq(chatMessages.designRequestId, designRequestId))
+    .orderBy(chatMessages.createdAt);
+}
+
+export async function getDesignRequestsWithConceptsByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const requests = await db.select().from(designRequests)
+    .where(eq(designRequests.userId, userId))
+    .orderBy(desc(designRequests.createdAt));
+  const results = await Promise.all(
+    requests.map(async (req) => {
+      const concepts = await db.select().from(conceptCards)
+        .where(eq(conceptCards.designRequestId, req.id))
+        .orderBy(conceptCards.createdAt);
+      const selectedConcept = concepts.find((c) => c.isSelected) ?? null;
+      const msgRows = await db.select({ count: sql<number>`count(*)::int` })
+        .from(chatMessages)
+        .where(eq(chatMessages.designRequestId, req.id));
+      return {
+        ...req,
+        concepts,
+        selectedConcept,
+        messageCount: Number(msgRows[0]?.count ?? 0),
+      };
+    })
+  );
+  return results;
 }
 
 // ─── Agent Logs ───────────────────────────────────────────────────────────────

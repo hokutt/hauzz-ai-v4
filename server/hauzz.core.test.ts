@@ -141,8 +141,9 @@ describe("IntakeFormSchema", () => {
     expect(() => IntakeFormSchema.parse({ ...validIntake, vibeKeywords: [] })).toThrow();
   });
 
-  it("requires at least one garment preference", () => {
-    expect(() => IntakeFormSchema.parse({ ...validIntake, garmentPreferences: [] })).toThrow();
+  it("allows empty garment preferences (optional field with default [])", () => {
+    // garmentPreferences defaults to [] in the schema, so empty array is valid
+    expect(() => IntakeFormSchema.parse({ ...validIntake, garmentPreferences: [] })).not.toThrow();
   });
 
   it("requires at least one color", () => {

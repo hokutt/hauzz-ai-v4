@@ -12,6 +12,9 @@ import {
   getDesignPacketByRequestId,
   getDesignPacketById,
   updateDesignRequestStatus,
+  getDesignRequestsWithConceptsByUserId,
+  getChatMessagesByRequestId,
+  saveChatMessage,
 } from "../db";
 import { generateConceptsForRequest } from "../designAgent";
 import { generateDesignPacket } from "../packetGenerator";
@@ -242,5 +245,49 @@ export const designRouter = router({
       }
 
       return getDesignPacketByRequestId(input.designRequestId);
+    }),
+
+  /**
+   * Get all design sessions (threads) for the current user, with concept previews.
+   */
+  getMyThreads: protectedProcedure
+    .query(async ({ ctx }) => {
+      return getDesignRequestsWithConceptsByUserId(ctx.user.id);
+    }),
+
+  /**
+   * Get all chat messages for a design request thread.
+   */
+  getThreadMessages: protectedProcedure
+    .input(z.object({ designRequestId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const request = await getDesignRequestById(input.designRequestId);
+      if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Thread not found" });
+      if (ctx.user.role !== "founder_admin" && request.userId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+      }
+      return getChatMessagesByRequestId(input.designRequestId);
+    }),
+
+  /**
+   * Save a chat message to a design request thread.
+   */
+  saveMessage: protectedProcedure
+    .input(z.object({
+      designRequestId: z.number(),
+      role: z.enum(["user", "assistant"]),
+      content: z.string().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const request = await getDesignRequestById(input.designRequestId);
+      if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Thread not found" });
+      if (ctx.user.role !== "founder_admin" && request.userId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+      }
+      return saveChatMessage({
+        designRequestId: input.designRequestId,
+        role: input.role,
+        content: input.content,
+      });
     }),
 });

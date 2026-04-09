@@ -15,6 +15,13 @@
       "when": 1775684735442,
       "tag": "0001_dazzling_black_panther",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1775775997440,
+      "tag": "0002_cooing_gamma_corps",
+      "breakpoints": true
     }
   ]
 }

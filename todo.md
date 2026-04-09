@@ -133,3 +133,13 @@
 
 ## Bugs
 - [x] "View Packet" button in Design Studio — wired onClick to open modal, added getPacket query, built full packet modal with garment specs, palette, materials, trims, production notes, risk score bar, and Download JSON link
+
+## Design Session Threads (My Designs)
+- [x] Add chat_messages table to Drizzle schema (designRequestId, role, content, createdAt)
+- [x] Migrate DB — applied SQL directly via Supabase MCP (safe additive migration)
+- [x] Add server procedures: saveMessage (mutation), getThreadMessages (query), getMyThreads (query for thread list)
+- [x] Build /my-designs page — thread list showing each past session with concept card preview, status, date, and resume button
+- [x] Wire Design Studio to auto-save each chat message to DB when user is authenticated
+- [x] Wire Design Studio to load existing messages when resuming a thread via ?requestId= param
+- [x] Add "My Designs" nav link in Design Studio nav (top right, visible when authenticated)
+- [x] Register /my-designs route in App.tsx

@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import FestivalMap from "./pages/FestivalMap";
 import DesignStudio from "./pages/DesignStudio";
 import AdminDashboard from "./pages/AdminDashboard";
+import MyDesigns from "./pages/MyDesigns";
 
 function Router() {
   return (
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/festival-map" component={FestivalMap} />
       <Route path="/design-studio" component={DesignStudio} />
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/my-designs" component={MyDesigns} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
