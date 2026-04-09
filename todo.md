@@ -102,11 +102,14 @@
 - [x] Order tracking UI — production orders tab in admin dashboard with advance stage controls
 
 ## Supabase Migration
-- [ ] Read and reconcile current Drizzle schema with RLS_POLICIES spec
-- [ ] Adapt schema from MySQL (Drizzle) to PostgreSQL (Supabase)
-- [ ] Apply full schema SQL to Supabase
-- [ ] Apply RLS policies from spec to Supabase
-- [ ] Re-seed Supabase with EDC venue, DNA docs, garment ontology, vendors
-- [ ] Update app DATABASE_URL and Drizzle config to point to Supabase
-- [ ] Verify connection and run full test suite against Supabase
-- [ ] Save checkpoint
+- [x] Read and reconcile current Drizzle schema with RLS_POLICIES spec
+- [x] Adapt schema from MySQL (Drizzle) to PostgreSQL (Supabase)
+- [x] Apply full schema SQL to Supabase — 12 tables, 5 enums, 24 indexes/triggers
+- [x] Apply RLS policies from spec to Supabase — 38 policies applied
+- [x] Re-seed Supabase with EDC venue, DNA docs, garment ontology, vendors
+- [x] Update app to use postgres-js driver pointing at Supabase transaction pooler
+- [x] Verify connection and run full test suite — 35/35 passing, 0 TypeScript errors
+- [x] Save checkpoint — version 3f5a9513
+
+## Bug Fixes
+- [ ] Fix OAuth callback failure on published site ({"error":"OAuth callback failed"})
