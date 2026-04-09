@@ -45,7 +45,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   try {
     const values: InsertUser = { openId: user.openId };
     const updateSet: Record<string, unknown> = {};
-    const textFields = ["name", "email", "loginMethod"] as const;
+    const textFields = ["name", "email", "loginMethod"] as const; // these are TS field names, Drizzle maps to snake_case DB columns
 
     for (const field of textFields) {
       const value = user[field];
@@ -57,7 +57,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
     if (user.lastSignedIn !== undefined) {
       values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
+      updateSet.lastSignedIn = user.lastSignedIn; // Drizzle maps to last_signed_in
     }
     if (user.role !== undefined) {
       values.role = user.role;

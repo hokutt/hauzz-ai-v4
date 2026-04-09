@@ -112,4 +112,5 @@
 - [x] Save checkpoint — version 3f5a9513
 
 ## Bug Fixes
-- [ ] Fix OAuth callback failure on published site ({"error":"OAuth callback failed"})
+- [x] Fix OAuth callback failure on published site — added detailed error logging, fixed redirect to use frontend origin from state param
+- [ ] Fix users table schema mismatch — Supabase users table column names don't match Drizzle schema (camelCase vs snake_case)

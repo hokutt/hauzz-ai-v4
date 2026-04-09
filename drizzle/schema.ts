@@ -30,14 +30,14 @@ export const logLevelEnum = pgEnum("log_level", ["info", "warn", "error"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  openId: varchar("open_id", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
+  loginMethod: varchar("login_method", { length: 64 }),
   role: userRoleEnum("role").default("friend_user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  lastSignedIn: timestamp("last_signed_in").defaultNow().notNull(),
 });
 
 export type User = typeof users.$inferSelect;
@@ -51,7 +51,7 @@ export const venues = pgTable("venues", {
   name: varchar("name", { length: 255 }).notNull(),
   location: varchar("location", { length: 255 }),
   description: text("description"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type Venue = typeof venues.$inferSelect;
@@ -60,12 +60,12 @@ export type Venue = typeof venues.$inferSelect;
 
 export const venueDna = pgTable("venue_dna", {
   id: serial("id").primaryKey(),
-  venueId: integer("venueId").notNull().references(() => venues.id),
+  venueId: integer("venue_id").notNull().references(() => venues.id),
   category: varchar("category", { length: 64 }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
   tags: jsonb("tags").$type<string[]>().default([]),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type VenueDna = typeof venueDna.$inferSelect;
@@ -74,16 +74,16 @@ export type VenueDna = typeof venueDna.$inferSelect;
 
 export const garmentOntology = pgTable("garment_ontology", {
   id: serial("id").primaryKey(),
-  garmentType: varchar("garmentType", { length: 128 }).notNull(),
+  garmentType: varchar("garment_type", { length: 128 }).notNull(),
   category: varchar("category", { length: 64 }).notNull(),
-  constructionNotes: text("constructionNotes"),
-  defaultMaterials: jsonb("defaultMaterials").$type<string[]>().default([]),
-  defaultTrims: jsonb("defaultTrims").$type<string[]>().default([]),
-  manufacturabilityBase: doublePrecision("manufacturabilityBase").default(0.7),
-  moqTypical: integer("moqTypical").default(10),
-  leadTimeDays: integer("leadTimeDays").default(21),
+  constructionNotes: text("construction_notes"),
+  defaultMaterials: jsonb("default_materials").$type<string[]>().default([]),
+  defaultTrims: jsonb("default_trims").$type<string[]>().default([]),
+  manufacturabilityBase: doublePrecision("manufacturability_base").default(0.7),
+  moqTypical: integer("moq_typical").default(10),
+  leadTimeDays: integer("lead_time_days").default(21),
   tags: jsonb("tags").$type<string[]>().default([]),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type GarmentOntology = typeof garmentOntology.$inferSelect;
@@ -92,19 +92,19 @@ export type GarmentOntology = typeof garmentOntology.$inferSelect;
 
 export const designRequests = pgTable("design_requests", {
   id: serial("id").primaryKey(),
-  userId: integer("userId").notNull().references(() => users.id),
-  venueSlug: varchar("venueSlug", { length: 64 }).notNull(),
-  eventDate: varchar("eventDate", { length: 32 }),
-  vibeKeywords: jsonb("vibeKeywords").$type<string[]>().default([]),
-  garmentPreferences: jsonb("garmentPreferences").$type<string[]>().default([]),
-  comfortCoverage: varchar("comfortCoverage", { length: 64 }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  venueSlug: varchar("venue_slug", { length: 64 }).notNull(),
+  eventDate: varchar("event_date", { length: 32 }),
+  vibeKeywords: jsonb("vibe_keywords").$type<string[]>().default([]),
+  garmentPreferences: jsonb("garment_preferences").$type<string[]>().default([]),
+  comfortCoverage: varchar("comfort_coverage", { length: 64 }),
   colors: jsonb("colors").$type<string[]>().default([]),
-  avoidList: jsonb("avoidList").$type<string[]>().default([]),
-  budgetBand: varchar("budgetBand", { length: 64 }),
-  bodyNotes: text("bodyNotes"),
+  avoidList: jsonb("avoid_list").$type<string[]>().default([]),
+  budgetBand: varchar("budget_band", { length: 64 }),
+  bodyNotes: text("body_notes"),
   status: designRequestStatusEnum("status").default("pending").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type DesignRequest = typeof designRequests.$inferSelect;
@@ -114,21 +114,21 @@ export type InsertDesignRequest = typeof designRequests.$inferInsert;
 
 export const conceptCards = pgTable("concept_cards", {
   id: serial("id").primaryKey(),
-  designRequestId: integer("designRequestId").notNull().references(() => designRequests.id),
-  storyName: varchar("storyName", { length: 255 }).notNull(),
-  storyNarrative: text("storyNarrative").notNull(),
-  garmentList: jsonb("garmentList").$type<ConceptGarment[]>().notNull(),
+  designRequestId: integer("design_request_id").notNull().references(() => designRequests.id),
+  storyName: varchar("story_name", { length: 255 }).notNull(),
+  storyNarrative: text("story_narrative").notNull(),
+  garmentList: jsonb("garment_list").$type<ConceptGarment[]>().notNull(),
   palette: jsonb("palette").$type<string[]>().notNull(),
   materials: jsonb("materials").$type<string[]>().notNull(),
   trims: jsonb("trims").$type<string[]>().default([]),
-  vibeAlignment: doublePrecision("vibeAlignment").notNull(),
-  manufacturabilityScore: doublePrecision("manufacturabilityScore").notNull(),
-  productionRiskScore: doublePrecision("productionRiskScore").notNull(),
-  isSelected: boolean("isSelected").default(false).notNull(),
-  isRejected: boolean("isRejected").default(false).notNull(),
-  generationRound: integer("generationRound").default(1).notNull(),
-  rawLlmOutput: jsonb("rawLlmOutput"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  vibeAlignment: doublePrecision("vibe_alignment").notNull(),
+  manufacturabilityScore: doublePrecision("manufacturability_score").notNull(),
+  productionRiskScore: doublePrecision("production_risk_score").notNull(),
+  isSelected: boolean("is_selected").default(false).notNull(),
+  isRejected: boolean("is_rejected").default(false).notNull(),
+  generationRound: integer("generation_round").default(1).notNull(),
+  rawLlmOutput: jsonb("raw_llm_output"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type ConceptGarment = {
@@ -146,12 +146,12 @@ export type InsertConceptCard = typeof conceptCards.$inferInsert;
 
 export const approvalHistory = pgTable("approval_history", {
   id: serial("id").primaryKey(),
-  designRequestId: integer("designRequestId").notNull().references(() => designRequests.id),
-  conceptCardId: integer("conceptCardId").notNull().references(() => conceptCards.id),
-  actorUserId: integer("actorUserId").notNull().references(() => users.id),
+  designRequestId: integer("design_request_id").notNull().references(() => designRequests.id),
+  conceptCardId: integer("concept_card_id").notNull().references(() => conceptCards.id),
+  actorUserId: integer("actor_user_id").notNull().references(() => users.id),
   action: approvalActionEnum("action").notNull(),
   notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type ApprovalHistory = typeof approvalHistory.$inferSelect;
@@ -160,18 +160,18 @@ export type ApprovalHistory = typeof approvalHistory.$inferSelect;
 
 export const designPackets = pgTable("design_packets", {
   id: serial("id").primaryKey(),
-  designRequestId: integer("designRequestId").notNull().references(() => designRequests.id),
-  conceptCardId: integer("conceptCardId").notNull().references(() => conceptCards.id),
-  storyName: varchar("storyName", { length: 255 }).notNull(),
-  garmentList: jsonb("garmentList").$type<ConceptGarment[]>().notNull(),
+  designRequestId: integer("design_request_id").notNull().references(() => designRequests.id),
+  conceptCardId: integer("concept_card_id").notNull().references(() => conceptCards.id),
+  storyName: varchar("story_name", { length: 255 }).notNull(),
+  garmentList: jsonb("garment_list").$type<ConceptGarment[]>().notNull(),
   palette: jsonb("palette").$type<string[]>().notNull(),
   materials: jsonb("materials").$type<string[]>().notNull(),
   trims: jsonb("trims").$type<string[]>().default([]),
-  constructionNotes: text("constructionNotes"),
-  productionRiskScore: doublePrecision("productionRiskScore").notNull(),
-  fileUrl: varchar("fileUrl", { length: 1024 }),
-  fileKey: varchar("fileKey", { length: 512 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  constructionNotes: text("construction_notes"),
+  productionRiskScore: doublePrecision("production_risk_score").notNull(),
+  fileUrl: varchar("file_url", { length: 1024 }),
+  fileKey: varchar("file_key", { length: 512 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type DesignPacket = typeof designPackets.$inferSelect;
@@ -181,19 +181,19 @@ export type DesignPacket = typeof designPackets.$inferSelect;
 export const vendors = pgTable("vendors", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  contactEmail: varchar("contactEmail", { length: 320 }),
-  contactName: varchar("contactName", { length: 255 }),
+  contactEmail: varchar("contact_email", { length: 320 }),
+  contactName: varchar("contact_name", { length: 255 }),
   geography: varchar("geography", { length: 128 }),
   capabilities: jsonb("capabilities").$type<string[]>().default([]),
-  moqMin: integer("moqMin").default(10),
-  turnaroundDays: integer("turnaroundDays").default(30),
-  priceBand: varchar("priceBand", { length: 64 }),
-  reliabilityScore: doublePrecision("reliabilityScore").default(0.7),
-  communicationsScore: doublePrecision("communicationsScore").default(0.7),
+  moqMin: integer("moq_min").default(10),
+  turnaroundDays: integer("turnaround_days").default(30),
+  priceBand: varchar("price_band", { length: 64 }),
+  reliabilityScore: doublePrecision("reliability_score").default(0.7),
+  communicationsScore: doublePrecision("communications_score").default(0.7),
   notes: text("notes"),
-  isActive: boolean("isActive").default(true).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type Vendor = typeof vendors.$inferSelect;
@@ -203,17 +203,17 @@ export type InsertVendor = typeof vendors.$inferInsert;
 
 export const vendorScores = pgTable("vendor_scores", {
   id: serial("id").primaryKey(),
-  designPacketId: integer("designPacketId").notNull().references(() => designPackets.id),
-  vendorId: integer("vendorId").notNull().references(() => vendors.id),
-  capabilityScore: doublePrecision("capabilityScore").notNull(),
-  timelineScore: doublePrecision("timelineScore").notNull(),
-  reliabilityScore: doublePrecision("reliabilityScore").notNull(),
-  priceScore: doublePrecision("priceScore").notNull(),
-  communicationsScore: doublePrecision("communicationsScore").notNull(),
-  totalScore: doublePrecision("totalScore").notNull(),
-  vendorRank: integer("vendorRank").notNull(),
-  scoringBreakdown: jsonb("scoringBreakdown").$type<VendorScoringBreakdown>(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  designPacketId: integer("design_packet_id").notNull().references(() => designPackets.id),
+  vendorId: integer("vendor_id").notNull().references(() => vendors.id),
+  capabilityScore: doublePrecision("capability_score").notNull(),
+  timelineScore: doublePrecision("timeline_score").notNull(),
+  reliabilityScore: doublePrecision("reliability_score").notNull(),
+  priceScore: doublePrecision("price_score").notNull(),
+  communicationsScore: doublePrecision("communications_score").notNull(),
+  totalScore: doublePrecision("total_score").notNull(),
+  vendorRank: integer("vendor_rank").notNull(),
+  scoringBreakdown: jsonb("scoring_breakdown").$type<VendorScoringBreakdown>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type VendorScoringBreakdown = {
@@ -244,16 +244,16 @@ export type OrderStage = (typeof ORDER_STAGES)[number];
 
 export const productionOrders = pgTable("production_orders", {
   id: serial("id").primaryKey(),
-  designRequestId: integer("designRequestId").notNull().references(() => designRequests.id),
-  designPacketId: integer("designPacketId").notNull().references(() => designPackets.id),
-  vendorId: integer("vendorId").notNull().references(() => vendors.id),
-  currentStage: orderStageEnum("currentStage").default("inquiry_sent").notNull(),
-  stageHistory: jsonb("stageHistory").$type<OrderStageEvent[]>().default([]),
-  quoteAmount: doublePrecision("quoteAmount"),
+  designRequestId: integer("design_request_id").notNull().references(() => designRequests.id),
+  designPacketId: integer("design_packet_id").notNull().references(() => designPackets.id),
+  vendorId: integer("vendor_id").notNull().references(() => vendors.id),
+  currentStage: orderStageEnum("current_stage").default("inquiry_sent").notNull(),
+  stageHistory: jsonb("stage_history").$type<OrderStageEvent[]>().default([]),
+  quoteAmount: doublePrecision("quote_amount"),
   currency: varchar("currency", { length: 8 }).default("USD"),
   notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type OrderStageEvent = {
@@ -270,14 +270,13 @@ export type InsertProductionOrder = typeof productionOrders.$inferInsert;
 
 export const agentLogs = pgTable("agent_logs", {
   id: serial("id").primaryKey(),
-  designRequestId: integer("designRequestId").references(() => designRequests.id),
+  designRequestId: integer("design_request_id").references(() => designRequests.id),
   stage: varchar("stage", { length: 64 }).notNull(),
   level: logLevelEnum("level").default("info").notNull(),
   message: text("message").notNull(),
   payload: jsonb("payload"),
-  durationMs: integer("durationMs"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  durationMs: integer("duration_ms"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type AgentLog = typeof agentLogs.$inferSelect;
-export type InsertAgentLog = typeof agentLogs.$inferInsert;
