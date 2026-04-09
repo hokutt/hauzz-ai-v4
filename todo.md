@@ -100,3 +100,13 @@
 - [x] Concept card review UI — concept cards shown in DesignStudio with select/reject actions
 - [x] Founder admin dashboard UI — /admin route with overview, requests, orders, vendors, agent logs
 - [x] Order tracking UI — production orders tab in admin dashboard with advance stage controls
+
+## Supabase Migration
+- [ ] Read and reconcile current Drizzle schema with RLS_POLICIES spec
+- [ ] Adapt schema from MySQL (Drizzle) to PostgreSQL (Supabase)
+- [ ] Apply full schema SQL to Supabase
+- [ ] Apply RLS policies from spec to Supabase
+- [ ] Re-seed Supabase with EDC venue, DNA docs, garment ontology, vendors
+- [ ] Update app DATABASE_URL and Drizzle config to point to Supabase
+- [ ] Verify connection and run full test suite against Supabase
+- [ ] Save checkpoint

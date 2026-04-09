@@ -1,26 +1,42 @@
 import {
-  int,
-  mysqlEnum,
-  mysqlTable,
+  integer,
+  pgEnum,
+  pgTable,
   text,
   timestamp,
   varchar,
-  float,
+  doublePrecision,
   boolean,
-  json,
-} from "drizzle-orm/mysql-core";
+  jsonb,
+  serial,
+} from "drizzle-orm/pg-core";
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+export const userRoleEnum = pgEnum("user_role", ["founder_admin", "friend_user"]);
+export const designRequestStatusEnum = pgEnum("design_request_status", [
+  "pending", "generating", "awaiting_approval", "approved", "in_production", "complete",
+]);
+export const approvalActionEnum = pgEnum("approval_action", [
+  "selected", "rejected", "regeneration_requested",
+]);
+export const orderStageEnum = pgEnum("order_stage", [
+  "inquiry_sent", "quote_received", "sample", "approved",
+  "production", "qa", "shipped", "delivered",
+]);
+export const logLevelEnum = pgEnum("log_level", ["info", "warn", "error"]);
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
-export const users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["founder_admin", "friend_user"]).default("friend_user").notNull(),
+  role: userRoleEnum("role").default("friend_user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
@@ -29,8 +45,8 @@ export type InsertUser = typeof users.$inferInsert;
 
 // ─── Venues ───────────────────────────────────────────────────────────────────
 
-export const venues = mysqlTable("venues", {
-  id: int("id").autoincrement().primaryKey(),
+export const venues = pgTable("venues", {
+  id: serial("id").primaryKey(),
   slug: varchar("slug", { length: 64 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   location: varchar("location", { length: 255 }),
@@ -42,13 +58,13 @@ export type Venue = typeof venues.$inferSelect;
 
 // ─── Venue DNA (RAG Documents) ────────────────────────────────────────────────
 
-export const venueDna = mysqlTable("venue_dna", {
-  id: int("id").autoincrement().primaryKey(),
-  venueId: int("venueId").notNull().references(() => venues.id),
-  category: varchar("category", { length: 64 }).notNull(), // e.g. "aesthetic", "palette", "crowd", "energy"
+export const venueDna = pgTable("venue_dna", {
+  id: serial("id").primaryKey(),
+  venueId: integer("venueId").notNull().references(() => venues.id),
+  category: varchar("category", { length: 64 }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
-  tags: json("tags").$type<string[]>().default([]),
+  tags: jsonb("tags").$type<string[]>().default([]),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -56,17 +72,17 @@ export type VenueDna = typeof venueDna.$inferSelect;
 
 // ─── Garment Ontology ─────────────────────────────────────────────────────────
 
-export const garmentOntology = mysqlTable("garment_ontology", {
-  id: int("id").autoincrement().primaryKey(),
-  garmentType: varchar("garmentType", { length: 128 }).notNull(), // e.g. "bodysuit", "rave bra", "cargo pants"
-  category: varchar("category", { length: 64 }).notNull(), // e.g. "top", "bottom", "outerwear", "accessory"
+export const garmentOntology = pgTable("garment_ontology", {
+  id: serial("id").primaryKey(),
+  garmentType: varchar("garmentType", { length: 128 }).notNull(),
+  category: varchar("category", { length: 64 }).notNull(),
   constructionNotes: text("constructionNotes"),
-  defaultMaterials: json("defaultMaterials").$type<string[]>().default([]),
-  defaultTrims: json("defaultTrims").$type<string[]>().default([]),
-  manufacturabilityBase: float("manufacturabilityBase").default(0.7), // 0–1 base score
-  moqTypical: int("moqTypical").default(10),
-  leadTimeDays: int("leadTimeDays").default(21),
-  tags: json("tags").$type<string[]>().default([]),
+  defaultMaterials: jsonb("defaultMaterials").$type<string[]>().default([]),
+  defaultTrims: jsonb("defaultTrims").$type<string[]>().default([]),
+  manufacturabilityBase: doublePrecision("manufacturabilityBase").default(0.7),
+  moqTypical: integer("moqTypical").default(10),
+  leadTimeDays: integer("leadTimeDays").default(21),
+  tags: jsonb("tags").$type<string[]>().default([]),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -74,21 +90,21 @@ export type GarmentOntology = typeof garmentOntology.$inferSelect;
 
 // ─── Design Requests (Intake) ─────────────────────────────────────────────────
 
-export const designRequests = mysqlTable("design_requests", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().references(() => users.id),
+export const designRequests = pgTable("design_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id),
   venueSlug: varchar("venueSlug", { length: 64 }).notNull(),
-  eventDate: varchar("eventDate", { length: 32 }), // ISO date string
-  vibeKeywords: json("vibeKeywords").$type<string[]>().default([]),
-  garmentPreferences: json("garmentPreferences").$type<string[]>().default([]),
-  comfortCoverage: varchar("comfortCoverage", { length: 64 }), // e.g. "minimal", "moderate", "full"
-  colors: json("colors").$type<string[]>().default([]),
-  avoidList: json("avoidList").$type<string[]>().default([]),
-  budgetBand: varchar("budgetBand", { length: 64 }), // e.g. "$200-$400", "$400-$800"
+  eventDate: varchar("eventDate", { length: 32 }),
+  vibeKeywords: jsonb("vibeKeywords").$type<string[]>().default([]),
+  garmentPreferences: jsonb("garmentPreferences").$type<string[]>().default([]),
+  comfortCoverage: varchar("comfortCoverage", { length: 64 }),
+  colors: jsonb("colors").$type<string[]>().default([]),
+  avoidList: jsonb("avoidList").$type<string[]>().default([]),
+  budgetBand: varchar("budgetBand", { length: 64 }),
   bodyNotes: text("bodyNotes"),
-  status: mysqlEnum("status", ["pending", "generating", "awaiting_approval", "approved", "in_production", "complete"]).default("pending").notNull(),
+  status: designRequestStatusEnum("status").default("pending").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type DesignRequest = typeof designRequests.$inferSelect;
@@ -96,22 +112,22 @@ export type InsertDesignRequest = typeof designRequests.$inferInsert;
 
 // ─── Concept Cards ────────────────────────────────────────────────────────────
 
-export const conceptCards = mysqlTable("concept_cards", {
-  id: int("id").autoincrement().primaryKey(),
-  designRequestId: int("designRequestId").notNull().references(() => designRequests.id),
-  storyName: varchar("storyName", { length: 255 }).notNull(), // e.g. "Electric Warrior"
+export const conceptCards = pgTable("concept_cards", {
+  id: serial("id").primaryKey(),
+  designRequestId: integer("designRequestId").notNull().references(() => designRequests.id),
+  storyName: varchar("storyName", { length: 255 }).notNull(),
   storyNarrative: text("storyNarrative").notNull(),
-  garmentList: json("garmentList").$type<ConceptGarment[]>().notNull(),
-  palette: json("palette").$type<string[]>().notNull(),
-  materials: json("materials").$type<string[]>().notNull(),
-  trims: json("trims").$type<string[]>().default([]),
-  vibeAlignment: float("vibeAlignment").notNull(), // 0–1
-  manufacturabilityScore: float("manufacturabilityScore").notNull(), // 0–1
-  productionRiskScore: float("productionRiskScore").notNull(), // 0–1 (lower = less risk)
+  garmentList: jsonb("garmentList").$type<ConceptGarment[]>().notNull(),
+  palette: jsonb("palette").$type<string[]>().notNull(),
+  materials: jsonb("materials").$type<string[]>().notNull(),
+  trims: jsonb("trims").$type<string[]>().default([]),
+  vibeAlignment: doublePrecision("vibeAlignment").notNull(),
+  manufacturabilityScore: doublePrecision("manufacturabilityScore").notNull(),
+  productionRiskScore: doublePrecision("productionRiskScore").notNull(),
   isSelected: boolean("isSelected").default(false).notNull(),
   isRejected: boolean("isRejected").default(false).notNull(),
-  generationRound: int("generationRound").default(1).notNull(),
-  rawLlmOutput: json("rawLlmOutput"),
+  generationRound: integer("generationRound").default(1).notNull(),
+  rawLlmOutput: jsonb("rawLlmOutput"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -128,12 +144,12 @@ export type InsertConceptCard = typeof conceptCards.$inferInsert;
 
 // ─── Approval History ─────────────────────────────────────────────────────────
 
-export const approvalHistory = mysqlTable("approval_history", {
-  id: int("id").autoincrement().primaryKey(),
-  designRequestId: int("designRequestId").notNull().references(() => designRequests.id),
-  conceptCardId: int("conceptCardId").notNull().references(() => conceptCards.id),
-  actorUserId: int("actorUserId").notNull().references(() => users.id),
-  action: mysqlEnum("action", ["selected", "rejected", "regeneration_requested"]).notNull(),
+export const approvalHistory = pgTable("approval_history", {
+  id: serial("id").primaryKey(),
+  designRequestId: integer("designRequestId").notNull().references(() => designRequests.id),
+  conceptCardId: integer("conceptCardId").notNull().references(() => conceptCards.id),
+  actorUserId: integer("actorUserId").notNull().references(() => users.id),
+  action: approvalActionEnum("action").notNull(),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -142,18 +158,18 @@ export type ApprovalHistory = typeof approvalHistory.$inferSelect;
 
 // ─── Design Packets ───────────────────────────────────────────────────────────
 
-export const designPackets = mysqlTable("design_packets", {
-  id: int("id").autoincrement().primaryKey(),
-  designRequestId: int("designRequestId").notNull().references(() => designRequests.id),
-  conceptCardId: int("conceptCardId").notNull().references(() => conceptCards.id),
+export const designPackets = pgTable("design_packets", {
+  id: serial("id").primaryKey(),
+  designRequestId: integer("designRequestId").notNull().references(() => designRequests.id),
+  conceptCardId: integer("conceptCardId").notNull().references(() => conceptCards.id),
   storyName: varchar("storyName", { length: 255 }).notNull(),
-  garmentList: json("garmentList").$type<ConceptGarment[]>().notNull(),
-  palette: json("palette").$type<string[]>().notNull(),
-  materials: json("materials").$type<string[]>().notNull(),
-  trims: json("trims").$type<string[]>().default([]),
+  garmentList: jsonb("garmentList").$type<ConceptGarment[]>().notNull(),
+  palette: jsonb("palette").$type<string[]>().notNull(),
+  materials: jsonb("materials").$type<string[]>().notNull(),
+  trims: jsonb("trims").$type<string[]>().default([]),
   constructionNotes: text("constructionNotes"),
-  productionRiskScore: float("productionRiskScore").notNull(),
-  fileUrl: varchar("fileUrl", { length: 1024 }), // S3 URL for the full packet JSON
+  productionRiskScore: doublePrecision("productionRiskScore").notNull(),
+  fileUrl: varchar("fileUrl", { length: 1024 }),
   fileKey: varchar("fileKey", { length: 512 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -162,22 +178,22 @@ export type DesignPacket = typeof designPackets.$inferSelect;
 
 // ─── Vendors ──────────────────────────────────────────────────────────────────
 
-export const vendors = mysqlTable("vendors", {
-  id: int("id").autoincrement().primaryKey(),
+export const vendors = pgTable("vendors", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   contactEmail: varchar("contactEmail", { length: 320 }),
   contactName: varchar("contactName", { length: 255 }),
-  geography: varchar("geography", { length: 128 }), // e.g. "USA", "China", "Mexico"
-  capabilities: json("capabilities").$type<string[]>().default([]), // e.g. ["bodysuit", "rave bra", "embroidery"]
-  moqMin: int("moqMin").default(10),
-  turnaroundDays: int("turnaroundDays").default(30),
-  priceBand: varchar("priceBand", { length: 64 }), // e.g. "$", "$$", "$$$"
-  reliabilityScore: float("reliabilityScore").default(0.7), // 0–1
-  communicationsScore: float("communicationsScore").default(0.7), // 0–1
+  geography: varchar("geography", { length: 128 }),
+  capabilities: jsonb("capabilities").$type<string[]>().default([]),
+  moqMin: integer("moqMin").default(10),
+  turnaroundDays: integer("turnaroundDays").default(30),
+  priceBand: varchar("priceBand", { length: 64 }),
+  reliabilityScore: doublePrecision("reliabilityScore").default(0.7),
+  communicationsScore: doublePrecision("communicationsScore").default(0.7),
   notes: text("notes"),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Vendor = typeof vendors.$inferSelect;
@@ -185,18 +201,18 @@ export type InsertVendor = typeof vendors.$inferInsert;
 
 // ─── Vendor Scores ────────────────────────────────────────────────────────────
 
-export const vendorScores = mysqlTable("vendor_scores", {
-  id: int("id").autoincrement().primaryKey(),
-  designPacketId: int("designPacketId").notNull().references(() => designPackets.id),
-  vendorId: int("vendorId").notNull().references(() => vendors.id),
-  capabilityScore: float("capabilityScore").notNull(), // 0–1
-  timelineScore: float("timelineScore").notNull(), // 0–1
-  reliabilityScore: float("reliabilityScore").notNull(), // 0–1
-  priceScore: float("priceScore").notNull(), // 0–1
-  communicationsScore: float("communicationsScore").notNull(), // 0–1
-  totalScore: float("totalScore").notNull(), // weighted composite
-  vendorRank: int("vendorRank").notNull(),
-  scoringBreakdown: json("scoringBreakdown").$type<VendorScoringBreakdown>(),
+export const vendorScores = pgTable("vendor_scores", {
+  id: serial("id").primaryKey(),
+  designPacketId: integer("designPacketId").notNull().references(() => designPackets.id),
+  vendorId: integer("vendorId").notNull().references(() => vendors.id),
+  capabilityScore: doublePrecision("capabilityScore").notNull(),
+  timelineScore: doublePrecision("timelineScore").notNull(),
+  reliabilityScore: doublePrecision("reliabilityScore").notNull(),
+  priceScore: doublePrecision("priceScore").notNull(),
+  communicationsScore: doublePrecision("communicationsScore").notNull(),
+  totalScore: doublePrecision("totalScore").notNull(),
+  vendorRank: integer("vendorRank").notNull(),
+  scoringBreakdown: jsonb("scoringBreakdown").$type<VendorScoringBreakdown>(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -226,23 +242,23 @@ export const ORDER_STAGES = [
 
 export type OrderStage = (typeof ORDER_STAGES)[number];
 
-export const productionOrders = mysqlTable("production_orders", {
-  id: int("id").autoincrement().primaryKey(),
-  designRequestId: int("designRequestId").notNull().references(() => designRequests.id),
-  designPacketId: int("designPacketId").notNull().references(() => designPackets.id),
-  vendorId: int("vendorId").notNull().references(() => vendors.id),
-  currentStage: mysqlEnum("currentStage", ORDER_STAGES).default("inquiry_sent").notNull(),
-  stageHistory: json("stageHistory").$type<OrderStageEvent[]>().default([]),
-  quoteAmount: float("quoteAmount"),
+export const productionOrders = pgTable("production_orders", {
+  id: serial("id").primaryKey(),
+  designRequestId: integer("designRequestId").notNull().references(() => designRequests.id),
+  designPacketId: integer("designPacketId").notNull().references(() => designPackets.id),
+  vendorId: integer("vendorId").notNull().references(() => vendors.id),
+  currentStage: orderStageEnum("currentStage").default("inquiry_sent").notNull(),
+  stageHistory: jsonb("stageHistory").$type<OrderStageEvent[]>().default([]),
+  quoteAmount: doublePrecision("quoteAmount"),
   currency: varchar("currency", { length: 8 }).default("USD"),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type OrderStageEvent = {
   stage: OrderStage;
-  enteredAt: string; // ISO timestamp
+  enteredAt: string;
   actorUserId: number;
   notes?: string;
 };
@@ -252,14 +268,14 @@ export type InsertProductionOrder = typeof productionOrders.$inferInsert;
 
 // ─── Agent Logs ───────────────────────────────────────────────────────────────
 
-export const agentLogs = mysqlTable("agent_logs", {
-  id: int("id").autoincrement().primaryKey(),
-  designRequestId: int("designRequestId").references(() => designRequests.id),
-  stage: varchar("stage", { length: 64 }).notNull(), // e.g. "intake", "rag_retrieval", "concept_generation", "approval", "packet_generation", "vendor_scoring", "order_transition"
-  level: mysqlEnum("level", ["info", "warn", "error"]).default("info").notNull(),
+export const agentLogs = pgTable("agent_logs", {
+  id: serial("id").primaryKey(),
+  designRequestId: integer("designRequestId").references(() => designRequests.id),
+  stage: varchar("stage", { length: 64 }).notNull(),
+  level: logLevelEnum("level").default("info").notNull(),
   message: text("message").notNull(),
-  payload: json("payload"), // structured data: prompts, inputs, outputs, scores
-  durationMs: int("durationMs"),
+  payload: jsonb("payload"),
+  durationMs: integer("durationMs"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
