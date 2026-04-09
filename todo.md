@@ -122,3 +122,11 @@
 - [x] Claude-powered design agent — concept generation upgraded to Claude 3.5 Sonnet with built-in LLM fallback in designAgent.ts
 - [x] AI vendor email drafting — Claude writes personalized outreach email per vendor via aiChat.draftVendorEmail; UI in Admin Dashboard vendors tab with copy-to-clipboard
 - [x] New test suite: server/hauzz.ai-features.test.ts — 17 tests covering voice/chat/email input schemas and design agent logic (52 total tests passing)
+
+## SEO
+- [x] Fix page title — changed from "HAUZZ.AI V4" (11 chars) to "HAUZZ.AI — Custom Festival Fashion, AI-Designed" (47 chars)
+- [x] Add meta description (158 chars) — describes AI-designed festival fashion end-to-end
+- [x] Add meta keywords — festival fashion, rave wear, EDC fashion, AI fashion designer, etc.
+- [x] Add Open Graph tags (og:title, og:description, og:type, og:url)
+- [x] Add Twitter Card meta tags
+- [x] Add robots meta tag (index, follow)
