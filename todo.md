@@ -147,3 +147,10 @@
 ## SEO Round 2
 - [x] Fix title: set document.title = "HAUZZ.AI — Custom Festival Fashion, AI-Designed" (49 chars) in Home.tsx useEffect for runtime SEO
 - [x] Fix description: trimmed from 162 to 143 chars in index.html, og:description, and twitter:description tags
+
+## SEO Round 3
+- [x] Add sitemap.xml to client/public listing /, /festival-map, /design-studio, /my-designs with priorities and changefreq
+- [x] Add robots.txt pointing to sitemap at https://hauzz.xyz/sitemap.xml
+- [x] Add canonical URL tag <link rel="canonical" href="https://hauzz.xyz"> to index.html
+- [x] Generate 1200x630 og:image (cosmic festival fashion card) and upload to CDN
+- [x] Add og:image, og:image:width, og:image:height, og:image:alt, and twitter:image meta tags to index.html
