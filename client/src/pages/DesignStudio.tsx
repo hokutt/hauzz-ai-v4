@@ -262,9 +262,7 @@ function GenerateConceptsBar({
       <div className="flex items-center gap-2">
         <Sparkles className="w-4 h-4 flex-shrink-0" style={{ color: "oklch(0.85 0.18 340)" }} />
         <span className="text-xs text-muted-foreground">
-          {isAuthenticated
-            ? "Ready to see your concepts?"
-            : "Sign in to generate your custom concepts"}
+          Ready to see your AI-generated concepts?
         </span>
       </div>
       <Button
@@ -273,7 +271,7 @@ function GenerateConceptsBar({
         style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
         onClick={onGenerate}
       >
-        {isAuthenticated ? "Generate Concepts" : "Sign In & Generate"}
+        Generate Concepts
         <Sparkles className="ml-1.5 w-3 h-3" />
       </Button>
     </div>
@@ -315,7 +313,17 @@ export default function DesignStudio() {
   // Track how many user messages sent (show generate bar after 2+)
   const userMessageCountRef = useRef(0);
 
+  // Guest token — stable per browser session, stored in localStorage
+  const [guestToken] = useState<string>(() => {
+    const stored = localStorage.getItem("hauzz_guest_token");
+    if (stored) return stored;
+    const token = crypto.randomUUID().replace(/-/g, "");
+    localStorage.setItem("hauzz_guest_token", token);
+    return token;
+  });
+
   const submitIntakeMutation = trpc.intake.submit.useMutation();
+  const guestSubmitMutation = trpc.intake.guestSubmit.useMutation();
   const selectConceptMutation = trpc.design.selectConcept.useMutation();
   const rejectConceptMutation = trpc.design.rejectConcept.useMutation();
   const sendMessageMutation = trpc.aiChat.sendMessage.useMutation();
@@ -457,34 +465,36 @@ export default function DesignStudio() {
   };
 
   const handleGenerateConcepts = async () => {
-    if (!isAuthenticated) {
-      // Redirect to sign in, then come back
-      window.location.href = getLoginUrl();
-      return;
-    }
-
     setShowGenerateBar(false);
     setIsGenerating(true);
     addMessage("assistant", "Perfect. Scanning EDC's venue DNA and building your concepts with Claude... This usually takes 20–40 seconds.");
 
     const { vibeKeywords, colors, budget } = extractVibeFromMessages();
+    const intakePayload = {
+      venueSlug: "edc-las-vegas",
+      eventDate: "2027-05-14",
+      vibeKeywords: vibeKeywords.split(",").map((s) => s.trim()).filter(Boolean),
+      garmentPreferences: [],
+      colors: colors,
+      avoidList: [],
+      budgetBand: budget,
+      bodyNotes: "",
+      comfortCoverage: "moderate" as const,
+    };
 
     try {
-      const intakeResult = await submitIntakeMutation.mutateAsync({
-        venueSlug: "edc-las-vegas",
-        eventDate: "2025-05-16",
-        vibeKeywords: vibeKeywords.split(",").map((s) => s.trim()).filter(Boolean),
-        garmentPreferences: [],
-        colors: colors,
-        avoidList: [],
-        budgetBand: budget,
-        bodyNotes: "",
-        comfortCoverage: "moderate",
-      });
-
-      const reqId = intakeResult.designRequestId;
+      let reqId: number;
+      if (isAuthenticated) {
+        const result = await submitIntakeMutation.mutateAsync(intakePayload);
+        reqId = result.designRequestId;
+      } else {
+        // Anonymous guest flow — no sign-in required for concept generation
+        const result = await guestSubmitMutation.mutateAsync({ ...intakePayload, guestToken });
+        reqId = result.designRequestId;
+        // Store guest requestId so they can resume after signing in
+        localStorage.setItem("hauzz_guest_request_id", String(reqId));
+      }
       setRequestId(reqId);
-
       addMessage("assistant", "Intake locked in. Claude is generating your story-led concept directions with AI mood board images — I'll update you when they're ready.");
       startPollingForConcepts(reqId);
     } catch (err: any) {
@@ -511,10 +521,17 @@ export default function DesignStudio() {
   };
 
   const handleSelectConcept = async (conceptId: number) => {
-    setSelectedConcept(conceptId);
     const concept = concepts.find((c) => c.id === conceptId);
     if (!concept || !requestId) return;
 
+    // Guest users must sign in to lock a concept and generate a production packet
+    if (!isAuthenticated) {
+      addMessage("user", `I love the **${concept.storyName}** direction.`);
+      addMessage("assistant", `Great choice! To lock in **${concept.storyName}** and generate your full production packet, you'll need to sign in — it only takes a second. Your concepts will be waiting for you.\n\n[**Sign In to Lock In Your Look**](${getLoginUrl()})`);
+      return;
+    }
+
+    setSelectedConcept(conceptId);
     addMessage("user", `I love the **${concept.storyName}** direction.`);
     addMessage("assistant", `Excellent choice. Locking in **${concept.storyName}** and generating your full design packet — garment specs, materials, trims, and production notes.`);
 

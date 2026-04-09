@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure, founderProcedure, router } from "../_core/trpc";
+import { protectedProcedure, founderProcedure, publicProcedure, router } from "../_core/trpc";
+import { sql } from "drizzle-orm";
+import { getDb } from "../db";
 import {
   getConceptCardsByRequestId,
   getConceptCardById,
@@ -289,5 +291,26 @@ export const designRouter = router({
         role: input.role,
         content: input.content,
       });
+    }),
+
+  /**
+   * Join the waitlist for a locked/upcoming festival.
+   */
+  joinWaitlist: publicProcedure
+    .input(z.object({
+      email: z.string().email(),
+      festivalId: z.string().min(1),
+      festivalName: z.string().min(1),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (db) {
+        await db.execute(
+          sql`INSERT INTO festival_waitlist (email, festival_id, festival_name, created_at)
+              VALUES (${input.email}, ${input.festivalId}, ${input.festivalName}, ${Date.now()})
+              ON CONFLICT (email, festival_id) DO NOTHING`
+        );
+      }
+      return { success: true };
     }),
 });

@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { IntakeFormSchema } from "../../shared/schemas";
-import { createDesignRequest, getDesignRequestById, getDesignRequestsByUserId } from "../db";
+import { createDesignRequest, getDesignRequestById, getDesignRequestsByUserId, getOrCreateGuestUser } from "../db";
 import { generateConceptsForRequest } from "../designAgent";
 import { agentLog } from "../agentLogger";
 
@@ -51,6 +51,57 @@ export const intakeRouter = router({
         success: true,
         designRequestId: newRequest.id,
         message: "Design request submitted. Concepts are being generated.",
+      };
+    }),
+
+  /**
+   * Submit a design request as a guest (no auth required).
+   * Creates a temporary guest user tied to a browser-local guestToken.
+   * The packet/production flow is still gated behind real auth.
+   */
+  guestSubmit: publicProcedure
+    .input(IntakeFormSchema.extend({
+      guestToken: z.string().min(8).max(64),
+    }))
+    .mutation(async ({ input }) => {
+      const { guestToken, ...intakeData } = input;
+
+      // Get or create a guest user row for this browser session
+      const userId = await getOrCreateGuestUser(guestToken);
+
+      await agentLog({
+        stage: "intake",
+        message: `Guest design request submitted (guestToken: ${guestToken.slice(0, 8)}...)`,
+        payload: { userId, venueSlug: intakeData.venueSlug, vibeKeywords: intakeData.vibeKeywords },
+      });
+
+      await createDesignRequest({
+        userId,
+        venueSlug: intakeData.venueSlug,
+        eventDate: intakeData.eventDate ?? null,
+        vibeKeywords: intakeData.vibeKeywords as any,
+        garmentPreferences: intakeData.garmentPreferences as any,
+        comfortCoverage: intakeData.comfortCoverage,
+        colors: intakeData.colors as any,
+        avoidList: intakeData.avoidList as any,
+        budgetBand: intakeData.budgetBand,
+        bodyNotes: intakeData.bodyNotes ?? null,
+        status: "pending",
+      });
+
+      const requests = await getDesignRequestsByUserId(userId);
+      const newRequest = requests[0];
+      if (!newRequest) throw new Error("Failed to create guest design request");
+
+      generateConceptsForRequest(newRequest, intakeData).catch(err => {
+        console.error(`[HAUZZ] Guest concept generation failed for request ${newRequest.id}:`, err);
+      });
+
+      return {
+        success: true,
+        designRequestId: newRequest.id,
+        guestUserId: userId,
+        message: "Guest design request submitted. Concepts are being generated.",
       };
     }),
 

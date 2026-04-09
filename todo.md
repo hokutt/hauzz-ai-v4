@@ -154,3 +154,8 @@
 - [x] Add canonical URL tag <link rel="canonical" href="https://hauzz.xyz"> to index.html
 - [x] Generate 1200x630 og:image (cosmic festival fashion card) and upload to CDN
 - [x] Add og:image, og:image:width, og:image:height, og:image:alt, and twitter:image meta tags to index.html
+
+## Investor Feedback Fixes
+- [x] Anonymous concept generation — guestSubmit procedure + guestToken in localStorage; guests generate concepts freely, sign-in gate only at concept selection/packet step with inline sign-in prompt in chat
+- [x] Festival map overhaul — EDC updated to 2027, 8 Insomniac festivals added as planets (HARD Summer, Nocturnal Wonderland, Lost In Dreams, Wasteland, EDC Korea, EDC Colombia, III Points); locked waitlist cards for festivals under 3 months out (Forbidden Kingdom, Beyond Wonderland Chicago, Electric Forest, Beyond Wonderland Gorge)
+- [x] Waitlist capture — locked festival cards show email form calling trpc.design.joinWaitlist, saves to festival_waitlist table with dedup (unique email+festivalId constraint), success toast shown

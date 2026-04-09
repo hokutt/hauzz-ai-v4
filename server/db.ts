@@ -119,6 +119,23 @@ export async function getAllGarments() {
 
 // ─── Design Requests ──────────────────────────────────────────────────────────
 
+export async function getOrCreateGuestUser(guestToken: string): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const openId = `guest_${guestToken}`;
+  const existing = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  if (existing[0]) return existing[0].id;
+  await db.insert(users).values({
+    openId,
+    name: "Guest",
+    role: "friend_user",
+    lastSignedIn: new Date(),
+  });
+  const created = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  if (!created[0]) throw new Error("Failed to create guest user");
+  return created[0].id;
+}
+
 export async function createDesignRequest(data: InsertDesignRequest) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
