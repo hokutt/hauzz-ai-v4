@@ -2,7 +2,10 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Sparkles, Zap, Star, RefreshCw, Check, ChevronRight, Mic, MicOff, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, Zap, Star, RefreshCw, Check, ChevronRight, Mic, MicOff, Loader2, Package, Palette, Scissors, AlertTriangle, FileText } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -296,6 +299,7 @@ export default function DesignStudio() {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [requestId, setRequestId] = useState<number | null>(null);
   const [showGenerateBar, setShowGenerateBar] = useState(false);
+  const [showPacketModal, setShowPacketModal] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Track how many user messages sent (show generate bar after 2+)
@@ -305,6 +309,10 @@ export default function DesignStudio() {
   const selectConceptMutation = trpc.design.selectConcept.useMutation();
   const rejectConceptMutation = trpc.design.rejectConcept.useMutation();
   const sendMessageMutation = trpc.aiChat.sendMessage.useMutation();
+  const packetQuery = trpc.design.getPacket.useQuery(
+    { designRequestId: requestId! },
+    { enabled: showPacketModal && requestId !== null }
+  );
   const utils = trpc.useUtils();
 
   useEffect(() => {
@@ -645,6 +653,7 @@ export default function DesignStudio() {
                   size="sm"
                   className="text-xs font-semibold gap-1"
                   style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
+                  onClick={() => setShowPacketModal(true)}
                 >
                   View Packet
                   <ChevronRight className="w-3 h-3" />
@@ -766,6 +775,191 @@ export default function DesignStudio() {
           </div>
         </div>
       </div>
+
+      {/* ── Design Packet Modal ── */}
+      <Dialog open={showPacketModal} onOpenChange={setShowPacketModal}>
+        <DialogContent
+          className="max-w-2xl w-full p-0 overflow-hidden"
+          style={{ background: "oklch(0.08 0.02 300)", border: "1px solid oklch(0.72 0.22 340 / 0.3)" }}
+        >
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
+            <DialogTitle className="flex items-center gap-3 font-display text-xl text-foreground">
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center"
+                style={{ background: "oklch(0.72 0.22 340 / 0.15)" }}
+              >
+                <Package className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
+              </div>
+              Design Packet
+              {packetQuery.data && (
+                <span className="text-sm font-normal text-muted-foreground">— {packetQuery.data.storyName}</span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[70vh]">
+            <div className="px-6 py-5 space-y-6">
+              {packetQuery.isLoading && (
+                <div className="flex items-center justify-center py-12 gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin" style={{ color: "oklch(0.85 0.18 340)" }} />
+                  <span className="text-sm text-muted-foreground">Loading your design packet...</span>
+                </div>
+              )}
+
+              {packetQuery.error && (
+                <div
+                  className="rounded-2xl p-4 flex items-start gap-3"
+                  style={{ background: "oklch(0.65 0.22 20 / 0.1)", border: "1px solid oklch(0.65 0.22 20 / 0.3)" }}
+                >
+                  <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "oklch(0.75 0.18 40)" }} />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground mb-1">Packet not ready yet</p>
+                    <p className="text-xs text-muted-foreground">Your design packet is still being generated. This usually takes 20–40 seconds after selecting a concept. Try again in a moment.</p>
+                  </div>
+                </div>
+              )}
+
+              {packetQuery.data && (() => {
+                const pkt = packetQuery.data;
+                const garmentList = pkt.garmentList as Array<{ garmentType: string; description: string; materials: string[]; trims: string[]; constructionNotes: string }>;
+                const palette = pkt.palette as string[];
+                const materials = pkt.materials as string[];
+                const trims = (pkt.trims as string[]) ?? [];
+                const riskScore = pkt.productionRiskScore;
+                const riskLabel = riskScore < 0.35 ? "Low Risk" : riskScore < 0.65 ? "Medium Risk" : "High Risk";
+                const riskColor = riskScore < 0.35 ? "oklch(0.78 0.20 160)" : riskScore < 0.65 ? "oklch(0.80 0.18 60)" : "oklch(0.72 0.22 20)";
+
+                return (
+                  <>
+                    {/* Risk + overview */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Production Risk</p>
+                        <div className="flex items-center gap-2">
+                          <div className="w-32 h-2 rounded-full" style={{ background: "oklch(0.18 0.03 300)" }}>
+                            <div
+                              className="h-2 rounded-full transition-all"
+                              style={{ width: `${Math.round(riskScore * 100)}%`, background: riskColor }}
+                            />
+                          </div>
+                          <span className="text-xs font-semibold" style={{ color: riskColor }}>
+                            {riskLabel} ({Math.round(riskScore * 100)}%)
+                          </span>
+                        </div>
+                      </div>
+                      {pkt.fileUrl && (
+                        <a
+                          href={pkt.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all hover:opacity-80"
+                          style={{ background: "oklch(0.72 0.22 340 / 0.15)", color: "oklch(0.85 0.18 340)", border: "1px solid oklch(0.72 0.22 340 / 0.3)" }}
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          Download JSON
+                        </a>
+                      )}
+                    </div>
+
+                    {/* Palette */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Palette className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
+                        <span className="text-sm font-semibold text-foreground">Color Palette</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {palette.map((color, i) => (
+                          <div key={i} className="flex items-center gap-2 glass px-3 py-1.5 rounded-xl">
+                            <div
+                              className="w-4 h-4 rounded-full border border-border/50 flex-shrink-0"
+                              style={{
+                                background: color.startsWith("#") || color.startsWith("rgb") || color.startsWith("oklch")
+                                  ? color
+                                  : `hsl(${(i * 60 + 300) % 360}, 70%, 60%)`,
+                              }}
+                            />
+                            <span className="text-xs text-foreground">{color}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Materials */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Scissors className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
+                        <span className="text-sm font-semibold text-foreground">Materials &amp; Trims</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {materials.map((m, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs">{m}</Badge>
+                        ))}
+                        {trims.map((t, i) => (
+                          <Badge key={`t-${i}`} variant="outline" className="text-xs">{t}</Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Garment list */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Package className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
+                        <span className="text-sm font-semibold text-foreground">Garment Specifications</span>
+                        <span className="text-xs text-muted-foreground">({garmentList.length} pieces)</span>
+                      </div>
+                      <div className="space-y-3">
+                        {garmentList.map((g, i) => (
+                          <div
+                            key={i}
+                            className="rounded-2xl p-4"
+                            style={{ background: "oklch(0.12 0.03 300)", border: "1px solid oklch(0.72 0.22 340 / 0.15)" }}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-bold text-foreground">{g.garmentType}</span>
+                              {g.materials?.length > 0 && (
+                                <span className="text-xs text-muted-foreground">{g.materials.slice(0, 2).join(" · ")}</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground leading-relaxed mb-2">{g.description}</p>
+                            {g.constructionNotes && (
+                              <p className="text-xs leading-relaxed" style={{ color: "oklch(0.75 0.12 340)" }}>
+                                <span className="font-semibold">Construction: </span>{g.constructionNotes}
+                              </p>
+                            )}
+                            {g.trims?.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {g.trims.map((t, ti) => (
+                                  <span key={ti} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.72 0.22 340 / 0.1)", color: "oklch(0.85 0.18 340)" }}>{t}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Construction notes */}
+                    {pkt.constructionNotes && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <FileText className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
+                          <span className="text-sm font-semibold text-foreground">Production Notes</span>
+                        </div>
+                        <div
+                          className="rounded-2xl p-4"
+                          style={{ background: "oklch(0.12 0.03 300)", border: "1px solid oklch(0.72 0.22 340 / 0.15)" }}
+                        >
+                          <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">{pkt.constructionNotes}</p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

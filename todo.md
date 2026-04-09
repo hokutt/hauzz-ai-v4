@@ -130,3 +130,6 @@
 - [x] Add Open Graph tags (og:title, og:description, og:type, og:url)
 - [x] Add Twitter Card meta tags
 - [x] Add robots meta tag (index, follow)
+
+## Bugs
+- [x] "View Packet" button in Design Studio — wired onClick to open modal, added getPacket query, built full packet modal with garment specs, palette, materials, trims, production notes, risk score bar, and Download JSON link
