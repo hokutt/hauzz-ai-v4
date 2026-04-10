@@ -165,3 +165,12 @@
 
 ## Planet Visual Redesign (Round 2)
 - [x] Redesign all festival planets with unique SVG: rings, atmospheric glow layers, surface textures/patterns, distinct silhouettes — each planet now has dramatically distinct colors, multi-band rings (Lost In Dreams, Nocturnal, EDC Korea get double rings), boosted saturation, and screen blend mode for surface art visibility
+
+## Style3D + NewArc.ai Design Pipeline
+- [ ] Research NewArc.ai API endpoints, auth, and garment render request format
+- [ ] Research FASHN.ai API as backup visual render option
+- [ ] Research Style3D local API / automation capabilities (folder watch, CLI, Python bindings)
+- [ ] Wire NewArc.ai render call into Design Studio concept generation — API key via env var, render displayed on concept card
+- [ ] Build Python folder-watcher bridge (style3d_bridge.py) — watches S3 for new design packets, drives Style3D locally, exports DXF + PDF, uploads back to S3
+- [ ] Build custom MCP server (hauzz-style3d-mcp) — wraps NewArc render + Style3D bridge as MCP tools callable from Claude Desktop
+- [ ] Write setup instructions for Jay: how to run the bridge on Mac + connect MCP to Claude Desktop

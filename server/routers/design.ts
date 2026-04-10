@@ -294,6 +294,128 @@ export const designRouter = router({
     }),
 
   /**
+   * FASHN.ai Product-to-Model render — takes a garment image URL and returns
+   * a photorealistic render of a festival model wearing the garment.
+   * Async: submits job, polls until done (max 90s), returns output image URL.
+   */
+  fashnRender: protectedProcedure
+    .input(z.object({
+      garmentImageUrl: z.string().url(),
+      prompt: z.string().optional().default("rave festival model, EDC Las Vegas, neon lights, vibrant energy"),
+      aspectRatio: z.enum(["1:1", "3:4", "4:3", "9:16"]).optional().default("3:4"),
+      resolution: z.enum(["1k", "2k"]).optional().default("1k"),
+    }))
+    .mutation(async ({ input }) => {
+      const apiKey = process.env.FASHN_API_KEY;
+      if (!apiKey) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "FASHN_API_KEY not configured — add it in project secrets" });
+
+      // Submit the render job
+      const submitRes = await fetch("https://api.fashn.ai/v1/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model_name: "product-to-model",
+          product_image: input.garmentImageUrl,
+          prompt: input.prompt,
+          aspect_ratio: input.aspectRatio,
+          resolution: input.resolution,
+          generation_mode: "fast",
+          num_images: 1,
+          output_format: "png",
+        }),
+      });
+      if (!submitRes.ok) {
+        const err = await submitRes.text();
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `FASHN submit failed: ${err}` });
+      }
+      const { id: predictionId } = await submitRes.json() as { id: string };
+
+      // Poll for result (max 90s, 3s intervals = 30 attempts)
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        const pollRes = await fetch(`https://api.fashn.ai/v1/status/${predictionId}`, {
+          headers: { "Authorization": `Bearer ${apiKey}` },
+        });
+        if (!pollRes.ok) continue;
+        const poll = await pollRes.json() as { status: string; output?: string[] };
+        if (poll.status === "succeeded" && poll.output?.[0]) {
+          return { renderUrl: poll.output[0], predictionId, status: "succeeded" };
+        }
+        if (poll.status === "failed") {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "FASHN render failed" });
+        }
+      }
+      throw new TRPCError({ code: "TIMEOUT", message: "FASHN render timed out after 90s" });
+    }),
+
+  /**
+   * NewArc.ai sketch-to-photorealistic-render.
+   * Placeholder until API docs are available from newarc.ai.
+   * Wire in the actual endpoint once Jay has the API key + docs.
+   */
+  newarcRender: protectedProcedure
+    .input(z.object({
+      sketchImageUrl: z.string().url(),
+      prompt: z.string().optional().default("rave festival fashion, vibrant colors, EDC aesthetic, photorealistic"),
+    }))
+    .mutation(async ({ input: _input }) => {
+      const apiKey = process.env.NEWARC_API_KEY;
+      if (!apiKey) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "NEWARC_API_KEY not configured — sign up at newarc.ai and add the key in project secrets" });
+      // TODO: Replace with actual NewArc.ai endpoint once docs are received
+      // Expected: POST https://api.newarc.ai/v1/sketch-to-render
+      // Body: { sketch_url, prompt, style: "photorealistic" }
+      throw new TRPCError({ code: "NOT_IMPLEMENTED", message: "NewArc.ai endpoint not yet wired — add NEWARC_API_KEY and update this procedure with the API docs" });
+    }),
+
+  /**
+   * Submit a design packet to the Style3D local bridge via S3.
+   * The Python bridge (hauzz-style3d-bridge.py) running on Jay's Mac watches
+   * the S3 inbox, processes through Style3D, and uploads DXF + PDF to outbox.
+   */
+  style3dSubmit: protectedProcedure
+    .input(z.object({
+      designRequestId: z.number(),
+      garmentImageUrl: z.string().url(),
+      fabricPreset: z.string().optional().default("rave-spandex"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const request = await getDesignRequestById(input.designRequestId);
+      if (!request) throw new TRPCError({ code: "NOT_FOUND" });
+      if (ctx.user.role !== "founder_admin" && request.userId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      const jobId = `style3d-${input.designRequestId}-${Date.now()}`;
+      const payload = JSON.stringify({
+        jobId,
+        designRequestId: input.designRequestId,
+        garmentImageUrl: input.garmentImageUrl,
+        fabricPreset: input.fabricPreset,
+        submittedAt: Date.now(),
+        submittedBy: ctx.user.id,
+      });
+      const { storagePut } = await import("../storage.js");
+      const { url } = await storagePut(`style3d-inbox/${jobId}.json`, Buffer.from(payload), "application/json");
+      return { jobId, inboxUrl: url, status: "submitted" };
+    }),
+
+  /**
+   * Poll the S3 outbox for Style3D output files (DXF pattern + PDF tech pack).
+   * Returns download URLs once the local bridge has finished processing.
+   */
+  style3dCheck: protectedProcedure
+    .input(z.object({ jobId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const { storageGet } = await import("../storage.js");
+      try {
+        const dxf = await storageGet(`style3d-outbox/${input.jobId}.dxf`);
+        const pdf = await storageGet(`style3d-outbox/${input.jobId}.pdf`);
+        return { status: "ready" as const, dxfUrl: dxf.url, pdfUrl: pdf.url };
+      } catch {
+        return { status: "pending" as const, dxfUrl: null, pdfUrl: null };
+      }
+    }),
+
+  /**
    * Join the waitlist for a locked/upcoming festival.
    */
   joinWaitlist: publicProcedure
