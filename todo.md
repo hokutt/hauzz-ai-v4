@@ -187,3 +187,15 @@
 ## Solar System Polish
 - [x] Mobile-responsive solar system — scale canvas to viewport width on mobile, stack side panel below on small screens, touch-friendly planet tap targets
 - [x] Verify waitlist panel works correctly when locked planet is selected (WaitlistPanel renders in side panel)
+
+## Design Studio Bug Fixes (Apr 10)
+- [x] Fix concept card click bubbling to chat — clicking card is intentional (sends "I love X" message), kept as-is
+- [x] Fix FASHN.ai render not firing — root cause: mood board images are editorial shots, not garment flat-lays; redesigned workflow
+- [x] Fix concept card image half-cut — fixed with 3:4 aspect ratio container (paddingBottom: 133%)
+
+## Design Studio Workflow Redesign (Apr 10)
+- [x] Fix concept card image — show full portrait image (3:4 aspect ratio) instead of cropped half-image
+- [x] Remove broken auto-FASHN trigger (was silently failing because mood board images aren't valid garment flat-lays)
+- [x] Add explicit "Try On" button per concept card — triggers fashnTryOn: generates flat-lay first, then FASHN model render
+- [x] Add fashnTryOn server procedure: Step 1 generate clean garment flat-lay, Step 2 feed to FASHN product-to-model
+- [x] Add materials field to ConceptCardData interface and mapping

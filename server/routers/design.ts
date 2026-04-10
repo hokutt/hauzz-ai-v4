@@ -416,6 +416,81 @@ export const designRouter = router({
     }),
 
   /**
+   * Generate a clean garment flat-lay image then feed it to FASHN product-to-model.
+   * This is the correct FASHN workflow: flat-lay → model render.
+   * Called explicitly via the "Try On" button on each concept card.
+   */
+  fashnTryOn: protectedProcedure
+    .input(z.object({
+      conceptId: z.number(),
+      storyName: z.string(),
+      garments: z.array(z.string()),
+      palette: z.array(z.string()),
+      materials: z.array(z.string()),
+      storyDescription: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const apiKey = process.env.FASHN_API_KEY;
+      if (!apiKey) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "FASHN_API_KEY not configured" });
+
+      const { generateImage } = await import("../_core/imageGeneration.js");
+
+      // Step 1: Generate a clean garment flat-lay (white background, isolated clothing)
+      const flatLayPrompt = [
+        `Professional product photography flat lay of festival rave outfit: ${input.garments.slice(0, 2).join(" and ")}.`,
+        `Colors: ${input.palette.slice(0, 3).join(", ")}.`,
+        input.materials.length > 0 ? `Materials: ${input.materials.slice(0, 2).join(", ")}.` : "",
+        `Pure white background, clean studio lighting, no model, no props, isolated garment only.`,
+        `High-end fashion product photography, sharp focus, commercial quality.`,
+        `Style: ${input.storyDescription?.slice(0, 80) ?? "rave festival fashion"}.`,
+      ].filter(Boolean).join(" ");
+
+      const flatLayResult = await generateImage({ prompt: flatLayPrompt });
+      if (!flatLayResult.url) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to generate garment flat-lay image" });
+
+      const garmentImageUrl = flatLayResult.url;
+
+      // Step 2: Submit to FASHN product-to-model
+      const fashnPrompt = `rave festival model, EDC Las Vegas 2027, neon lights, vibrant energy, ${input.storyName} aesthetic, full body shot`;
+      const submitRes = await fetch("https://api.fashn.ai/v1/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model_name: "product-to-model",
+          product_image: garmentImageUrl,
+          prompt: fashnPrompt,
+          aspect_ratio: "3:4",
+          resolution: "1k",
+          generation_mode: "fast",
+          num_images: 1,
+          output_format: "png",
+        }),
+      });
+      if (!submitRes.ok) {
+        const err = await submitRes.text();
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `FASHN submit failed: ${err}` });
+      }
+      const { id: predictionId } = await submitRes.json() as { id: string };
+
+      // Step 3: Poll for result (max 90s)
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        const pollRes = await fetch(`https://api.fashn.ai/v1/status/${predictionId}`, {
+          headers: { "Authorization": `Bearer ${apiKey}` },
+        });
+        if (!pollRes.ok) continue;
+        const poll = await pollRes.json() as { status: string; output?: string[] };
+        if (poll.status === "succeeded" && poll.output?.[0]) {
+          return { renderUrl: poll.output[0], flatLayUrl: garmentImageUrl, predictionId, status: "succeeded" as const };
+        }
+        if (poll.status === "failed") {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "FASHN render failed" });
+        }
+      }
+      throw new TRPCError({ code: "TIMEOUT", message: "FASHN render timed out after 90s" });
+    }),
+
+  /**
    * Join the waitlist for a locked/upcoming festival.
    */
   joinWaitlist: publicProcedure

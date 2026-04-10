@@ -23,6 +23,7 @@ interface ConceptCardData {
   storyDescription: string;
   garments: string[];
   palette: string[];
+  materials: string[];
   manufacturabilityScore: number;
   imageUrl?: string | null;
 }
@@ -34,13 +35,15 @@ function ConceptCard({
   onReject,
   index,
   fashnRender,
+  onTryOn,
 }: {
   concept: ConceptCardData;
   isSelected: boolean;
   onSelect: () => void;
   onReject?: () => void;
+  onTryOn?: () => void;
   index: number;
-  fashnRender?: { status: "pending" | "loading" | "done" | "error"; url?: string };
+  fashnRender?: { status: "pending" | "loading" | "done" | "error"; url?: string; flatLayUrl?: string };
 }) {
   const fallbackImages = [RAVE_FASHION, NEBULA_PINK, GALAXY_STARS];
   // Priority: FASHN photorealistic render > AI mood board > fallback stock
@@ -55,91 +58,86 @@ function ConceptCard({
         isSelected ? "ring-2 ring-primary glow-pink" : "hover:ring-1 hover:ring-primary/40"
       }`}
       onClick={onSelect}
-      style={{ minHeight: 280 }}
     >
-      {/* Base image */}
-      <img
-        src={displayImg}
-        alt={concept.storyName}
-        className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${
-          isRendering ? "opacity-60" : "opacity-100"
-        }`}
-        onError={(e) => {
-          (e.target as HTMLImageElement).src = fallbackImages[index % fallbackImages.length];
-        }}
-      />
+      {/* Full-height image — aspect ratio 3:4 for full portrait */}
+      <div className="relative w-full" style={{ paddingBottom: "133%" }}>
+        <img
+          src={displayImg}
+          alt={concept.storyName}
+          className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${
+            isRendering ? "opacity-60" : "opacity-100"
+          }`}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = fallbackImages[index % fallbackImages.length];
+          }}
+        />
 
-      {/* FASHN loading shimmer overlay */}
-      {isRendering && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* FASHN loading shimmer overlay */}
+        {isRendering && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div
+              className="absolute inset-0 animate-pulse"
+              style={{ background: "linear-gradient(135deg, oklch(0.72 0.22 340 / 0.08) 0%, oklch(0.55 0.18 280 / 0.12) 50%, oklch(0.72 0.22 340 / 0.08) 100%)" }}
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background: "linear-gradient(90deg, transparent 0%, oklch(0.85 0.15 340 / 0.15) 50%, transparent 100%)",
+                animation: "shimmer-sweep 1.8s ease-in-out infinite",
+              }}
+            />
+          </div>
+        )}
+
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+
+        {/* Image source badge */}
+        {fashnRender?.status === "done" ? (
           <div
-            className="absolute inset-0 animate-pulse"
-            style={{ background: "linear-gradient(135deg, oklch(0.72 0.22 340 / 0.08) 0%, oklch(0.55 0.18 280 / 0.12) 50%, oklch(0.72 0.22 340 / 0.08) 100%)" }}
-          />
+            className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-xs glass flex items-center gap-1"
+            style={{ color: "oklch(0.78 0.20 160)" }}
+          >
+            <Camera className="w-3 h-3" />
+            FASHN Render
+          </div>
+        ) : isRendering ? (
           <div
-            className="absolute inset-0"
-            style={{
-              background: "linear-gradient(90deg, transparent 0%, oklch(0.85 0.15 340 / 0.15) 50%, transparent 100%)",
-              animation: "shimmer-sweep 1.8s ease-in-out infinite",
-            }}
-          />
-        </div>
-      )}
+            className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-xs glass flex items-center gap-1"
+            style={{ color: "oklch(0.85 0.18 340)" }}
+          >
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Rendering...
+          </div>
+        ) : concept.imageUrl ? (
+          <div
+            className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-xs glass"
+            style={{ color: "oklch(0.85 0.18 340)" }}
+          >
+            AI Mood Board
+          </div>
+        ) : null}
 
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        {/* Viability badge */}
+        <div
+          className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-bold glass"
+          style={{ color: concept.manufacturabilityScore >= 70 ? "oklch(0.78 0.20 160)" : "oklch(0.80 0.18 60)" }}
+        >
+          {concept.manufacturabilityScore}% viable
+        </div>
 
-      {/* Image source badge */}
-      {fashnRender?.status === "done" ? (
-        <div
-          className="absolute top-4 right-12 px-2 py-0.5 rounded-full text-xs glass flex items-center gap-1"
-          style={{ color: "oklch(0.78 0.20 160)" }}
-        >
-          <Camera className="w-3 h-3" />
-          FASHN Render
-        </div>
-      ) : isRendering ? (
-        <div
-          className="absolute top-4 right-12 px-2 py-0.5 rounded-full text-xs glass flex items-center gap-1"
-          style={{ color: "oklch(0.85 0.18 340)" }}
-        >
-          <Loader2 className="w-3 h-3 animate-spin" />
-          Rendering...
-        </div>
-      ) : fashnRender?.status === "error" ? (
-        <div
-          className="absolute top-4 right-12 px-2 py-0.5 rounded-full text-xs glass"
-          style={{ color: "oklch(0.75 0.12 20)" }}
-          title="Photorealistic render unavailable — showing AI mood board"
-        >
-          AI Mood Board
-        </div>
-      ) : concept.imageUrl ? (
-        <div
-          className="absolute top-4 right-12 px-2 py-0.5 rounded-full text-xs glass"
-          style={{ color: "oklch(0.85 0.18 340)" }}
-        >
-          AI Generated
-        </div>
-      ) : null}
-
-      {isSelected && (
-        <div
-          className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center"
-          style={{ background: "oklch(0.72 0.22 340)" }}
-        >
-          <Check className="w-4 h-4" style={{ color: "oklch(0.06 0.02 300)" }} />
-        </div>
-      )}
-
-      <div
-        className="absolute top-4 left-4 px-2.5 py-1 rounded-full text-xs font-bold glass"
-        style={{ color: concept.manufacturabilityScore >= 70 ? "oklch(0.78 0.20 160)" : "oklch(0.80 0.18 60)" }}
-      >
-        {concept.manufacturabilityScore}% viable
+        {isSelected && (
+          <div
+            className="absolute bottom-3 right-3 w-7 h-7 rounded-full flex items-center justify-center"
+            style={{ background: "oklch(0.72 0.22 340)" }}
+          >
+            <Check className="w-3.5 h-3.5" style={{ color: "oklch(0.06 0.02 300)" }} />
+          </div>
+        )}
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 p-5">
-        <h3 className="font-display font-bold text-lg text-foreground mb-1">{concept.storyName}</h3>
+      {/* Card body below image */}
+      <div className="p-4">
+        <h3 className="font-display font-bold text-base text-foreground mb-1">{concept.storyName}</h3>
         <p className="text-muted-foreground text-xs leading-relaxed mb-3 line-clamp-2">
           {concept.storyDescription}
         </p>
@@ -148,7 +146,7 @@ function ConceptCard({
           {concept.palette.slice(0, 5).map((color, i) => (
             <div
               key={i}
-              className="w-4 h-4 rounded-full border border-border/50"
+              className="w-4 h-4 rounded-full border border-border/50 flex-shrink-0"
               title={color}
               style={{
                 background: color.startsWith("#") || color.startsWith("rgb") || color.startsWith("oklch")
@@ -157,10 +155,10 @@ function ConceptCard({
               }}
             />
           ))}
-          <span className="text-xs text-muted-foreground ml-1">{concept.palette.slice(0, 3).join(", ")}</span>
+          <span className="text-xs text-muted-foreground ml-1 truncate">{concept.palette.slice(0, 3).join(", ")}</span>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5 mb-3">
           {concept.garments.slice(0, 3).map((g, i) => (
             <span key={i} className="glass px-2 py-0.5 rounded-full text-xs text-muted-foreground">
               {g}
@@ -173,24 +171,39 @@ function ConceptCard({
           )}
         </div>
 
-        {!isSelected && onReject && (
-          <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+        {/* Action buttons */}
+        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+          {!isSelected && onReject ? (
+            <>
+              <button
+                className="flex-1 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                style={{ background: "oklch(0.72 0.22 340 / 0.15)", color: "oklch(0.85 0.18 340)", border: "1px solid oklch(0.72 0.22 340 / 0.3)" }}
+                onClick={onSelect}
+              >
+                Select
+              </button>
+              <button
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                style={{ background: "oklch(0.65 0.10 20 / 0.15)", color: "oklch(0.75 0.12 20)", border: "1px solid oklch(0.65 0.10 20 / 0.3)" }}
+                onClick={onReject}
+              >
+                Reject
+              </button>
+            </>
+          ) : null}
+          {/* Try On button — generates flat-lay then FASHN model render */}
+          {onTryOn && fashnRender?.status !== "done" && !isRendering && (
             <button
-              className="flex-1 py-1.5 rounded-xl text-xs font-semibold transition-all"
-              style={{ background: "oklch(0.72 0.22 340 / 0.15)", color: "oklch(0.85 0.18 340)", border: "1px solid oklch(0.72 0.22 340 / 0.3)" }}
-              onClick={onSelect}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+              style={{ background: "oklch(0.55 0.18 280 / 0.15)", color: "oklch(0.78 0.20 280)", border: "1px solid oklch(0.55 0.18 280 / 0.35)" }}
+              onClick={onTryOn}
+              title="Generate a photorealistic model render using FASHN.ai"
             >
-              Select
+              <Camera className="w-3 h-3" />
+              Try On
             </button>
-            <button
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
-              style={{ background: "oklch(0.65 0.10 20 / 0.15)", color: "oklch(0.75 0.12 20)", border: "1px solid oklch(0.65 0.10 20 / 0.3)" }}
-              onClick={onReject}
-            >
-              Reject
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -374,8 +387,8 @@ export default function DesignStudio() {
     return token;
   });
 
-  // FASHN render state: Map<conceptId, { status: 'pending'|'loading'|'done'|'error', url?: string }>
-  const [fashnRenders, setFashnRenders] = useState<Map<number, { status: "pending" | "loading" | "done" | "error"; url?: string }>>(new Map());
+  // FASHN render state: Map<conceptId, { status, url?, flatLayUrl? }>
+  const [fashnRenders, setFashnRenders] = useState<Map<number, { status: "pending" | "loading" | "done" | "error"; url?: string; flatLayUrl?: string }>>(new Map());
 
   const submitIntakeMutation = trpc.intake.submit.useMutation();
   const guestSubmitMutation = trpc.intake.guestSubmit.useMutation();
@@ -383,7 +396,7 @@ export default function DesignStudio() {
   const rejectConceptMutation = trpc.design.rejectConcept.useMutation();
   const sendMessageMutation = trpc.aiChat.sendMessage.useMutation();
   const saveMessageMutation = trpc.design.saveMessage.useMutation();
-  const fashnRenderMutation = trpc.design.fashnRender.useMutation();
+  const fashnTryOnMutation = trpc.design.fashnTryOn.useMutation();
   const packetQuery = trpc.design.getPacket.useQuery(
     { designRequestId: requestId! },
     { enabled: showPacketModal && requestId !== null }
@@ -428,6 +441,7 @@ export default function DesignStudio() {
             storyDescription: c.storyNarrative,
             garments: (c.garmentList as Array<{ garmentType: string }>).map((g) => g.garmentType),
             palette: c.palette as string[],
+            materials: (c.materials as string[] | null) ?? [],
             manufacturabilityScore: Math.round(c.manufacturabilityScore * 100),
             imageUrl: (c.rawLlmOutput as any)?.conceptImageUrl ?? null,
           }))
@@ -443,39 +457,38 @@ export default function DesignStudio() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Auto-trigger FASHN renders when new concepts load (authenticated users only)
-  useEffect(() => {
-    if (!isAuthenticated || concepts.length === 0) return;
-    concepts.forEach((concept) => {
-      if (!concept.imageUrl) return; // need a source image to render from
+  // handleTryOn: user-triggered FASHN render — generates flat-lay then model render
+  const handleTryOn = useCallback(async (concept: ConceptCardData) => {
+    if (!isAuthenticated) return; // Try On requires auth (protected procedure)
+    setFashnRenders((prev) => {
+      if (prev.get(concept.id)?.status === "loading") return prev; // already in progress
+      const next = new Map(prev);
+      next.set(concept.id, { status: "loading" });
+      return next;
+    });
+    try {
+      const result = await fashnTryOnMutation.mutateAsync({
+        conceptId: concept.id,
+        storyName: concept.storyName,
+        garments: concept.garments,
+        palette: concept.palette,
+        materials: concept.materials,
+        storyDescription: concept.storyDescription,
+      });
       setFashnRenders((prev) => {
-        if (prev.has(concept.id)) return prev; // already queued/done
         const next = new Map(prev);
-        next.set(concept.id, { status: "loading" });
+        next.set(concept.id, { status: "done", url: result.renderUrl, flatLayUrl: result.flatLayUrl });
         return next;
       });
-      // Fire the render — don't block UI
-      fashnRenderMutation.mutateAsync({
-        garmentImageUrl: concept.imageUrl!,
-        prompt: `rave festival model, EDC Las Vegas 2027, neon lights, vibrant energy, ${concept.storyName} aesthetic`,
-        aspectRatio: "3:4",
-        resolution: "1k",
-      }).then((result) => {
-        setFashnRenders((prev) => {
-          const next = new Map(prev);
-          next.set(concept.id, { status: "done", url: result.renderUrl });
-          return next;
-        });
-      }).catch(() => {
-        setFashnRenders((prev) => {
-          const next = new Map(prev);
-          next.set(concept.id, { status: "error" });
-          return next;
-        });
+    } catch {
+      setFashnRenders((prev) => {
+        const next = new Map(prev);
+        next.set(concept.id, { status: "error" });
+        return next;
       });
-    });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [concepts, isAuthenticated]);
+  }, [isAuthenticated, fashnTryOnMutation]);
 
   useEffect(() => {
     return () => {
@@ -511,6 +524,7 @@ export default function DesignStudio() {
               storyDescription: c.storyNarrative,
               garments: (c.garmentList as Array<{ garmentType: string }>).map((g) => g.garmentType),
               palette: c.palette as string[],
+              materials: (c.materials as string[] | null) ?? [],
               manufacturabilityScore: Math.round(c.manufacturabilityScore * 100),
               imageUrl: imageUrl ?? null,
             };
@@ -613,6 +627,11 @@ export default function DesignStudio() {
   const handleSelectConcept = async (conceptId: number) => {
     const concept = concepts.find((c) => c.id === conceptId);
     if (!concept || !requestId) return;
+    // Dedup: if already selected, just re-open the packet modal — don't re-send chat messages
+    if (selectedConcept === conceptId) {
+      setShowPacketModal(true);
+      return;
+    }
 
     // Guest users must sign in to lock a concept and generate a production packet
     if (!isAuthenticated) {
@@ -809,9 +828,9 @@ export default function DesignStudio() {
                     index={i}
                     isSelected={selectedConcept === concept.id}
                     onSelect={() => handleSelectConcept(concept.id)}
+                    onReject={() => handleRejectConcept(concept.id)}
                     fashnRender={fashnRenders.get(concept.id)}
-                  
-  onReject={() => handleRejectConcept(concept.id)}
+                    onTryOn={isAuthenticated ? () => handleTryOn(concept) : undefined}
                   />
                 ))}
               </div>
