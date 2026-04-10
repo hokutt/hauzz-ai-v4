@@ -199,3 +199,9 @@
 - [x] Add explicit "Try On" button per concept card — triggers fashnTryOn: generates flat-lay first, then FASHN model render
 - [x] Add fashnTryOn server procedure: Step 1 generate clean garment flat-lay, Step 2 feed to FASHN product-to-model
 - [x] Add materials field to ConceptCardData interface and mapping
+
+## Waitlist Admin Tab + Pricing (Apr 10)
+- [x] Add admin.getWaitlist procedure — query festival_waitlist table, group by festival, return email list + counts
+- [x] Add Waitlist tab to Admin Dashboard — table of emails per festival, total count, joined date
+- [x] Add CSV export button on Waitlist tab — download all waitlist emails as CSV
+- [x] Add Pricing section to homepage — Free / $350+ Full Garment / $550+ Rush tier cards with feature lists and CTAs

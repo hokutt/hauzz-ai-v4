@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, LayoutDashboard, Users, Package, Truck, Activity,
   ChevronRight, RefreshCw, Zap, Star, CheckCircle, Clock, AlertCircle,
-  Mail, Loader2, Copy, Check
+  Mail, Loader2, Copy, Check, ListChecks, Download
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -443,12 +443,13 @@ export default function AdminDashboard() {
   const [, navigate] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "requests" | "orders" | "vendors" | "logs">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "requests" | "orders" | "vendors" | "logs" | "waitlist">("overview");
 
   const { data: dashboard, isLoading: dashLoading, refetch: refetchDash } = trpc.admin.getDashboard.useQuery(undefined, { enabled: isAuthenticated });
   const { data: allOrders, refetch: refetchOrders } = trpc.production.listOrders.useQuery(undefined, { enabled: isAuthenticated && activeTab === "orders" });
   const { data: allVendors } = trpc.production.listVendors.useQuery(undefined, { enabled: isAuthenticated && activeTab === "vendors" });
   const { data: recentLogs } = trpc.admin.getRecentLogs.useQuery({ limit: 30 }, { enabled: isAuthenticated && activeTab === "logs" });
+  const { data: waitlistData } = trpc.admin.getWaitlist.useQuery(undefined, { enabled: isAuthenticated && activeTab === "waitlist" });
 
   const [advancingId, setAdvancingId] = useState<number | null>(null);
   const advanceStageMutation = trpc.production.advanceStage.useMutation({
@@ -489,6 +490,7 @@ export default function AdminDashboard() {
     { id: "requests", label: "Requests", icon: <Users className="w-4 h-4" /> },
     { id: "orders", label: "Orders", icon: <Package className="w-4 h-4" /> },
     { id: "vendors", label: "Vendors", icon: <Truck className="w-4 h-4" /> },
+    { id: "waitlist", label: "Waitlist", icon: <ListChecks className="w-4 h-4" /> },
     { id: "logs", label: "Agent Logs", icon: <Activity className="w-4 h-4" /> },
   ] as const;
 
@@ -649,6 +651,72 @@ export default function AdminDashboard() {
         {/* ── Vendors Tab ── */}
         {activeTab === "vendors" && (
           <VendorsTab allVendors={allVendors} />
+        )}
+
+        {/* ── Waitlist Tab ── */}
+        {activeTab === "waitlist" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-display font-bold text-xl text-foreground">Festival Waitlist</h3>
+                <p className="text-muted-foreground text-sm mt-1">{waitlistData?.total ?? 0} total signups across {waitlistData?.festivals.length ?? 0} festivals</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2"
+                onClick={() => {
+                  if (!waitlistData?.raw?.length) return;
+                  const csv = ["email,festival_id,festival_name,joined_at", ...waitlistData.raw.map((r: any) => `${r.email},${r.festival_id},"${r.festival_name}",${new Date(Number(r.created_at)).toISOString()}`)].join("\n");
+                  const blob = new Blob([csv], { type: "text/csv" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `hauzz-waitlist-${new Date().toISOString().slice(0,10)}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                <Download className="w-4 h-4" />
+                Export CSV
+              </Button>
+            </div>
+            {!waitlistData ? (
+              <div className="text-muted-foreground text-sm">Loading waitlist...</div>
+            ) : waitlistData.total === 0 ? (
+              <div className="glass rounded-3xl p-8 text-center">
+                <ListChecks className="w-8 h-8 mx-auto mb-3" style={{ color: "oklch(0.72 0.22 340)" }} />
+                <p className="text-muted-foreground text-sm">No waitlist signups yet. Locked festival cards capture emails here.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {waitlistData.festivals.map((festival: any) => (
+                  <div key={festival.festivalId} className="glass rounded-3xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className="font-semibold text-foreground">{festival.festivalName}</h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">{festival.emails.length} signup{festival.emails.length !== 1 ? "s" : ""}</p>
+                      </div>
+                      <span
+                        className="px-3 py-1 rounded-full text-xs font-bold glass"
+                        style={{ color: "oklch(0.72 0.22 340)" }}
+                      >
+                        {festival.emails.length}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {festival.emails.map((entry: any) => (
+                        <div key={entry.email} className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
+                          <span className="text-sm text-foreground font-mono">{entry.email}</span>
+                          <span className="text-xs text-muted-foreground">{new Date(entry.joinedAt).toLocaleDateString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* ── Logs Tab ── */}

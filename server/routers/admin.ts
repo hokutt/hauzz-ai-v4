@@ -16,7 +16,7 @@ import {
   getDb,
 } from "../db";
 import { users, vendors } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export const adminRouter = router({
   /**
@@ -182,5 +182,31 @@ export const adminRouter = router({
     .input(z.object({ limit: z.number().optional().default(50) }))
     .query(async ({ input }) => {
       return getAllAgentLogs(input.limit);
+    }),
+
+  /**
+   * Get all festival waitlist signups, grouped by festival.
+   */
+  getWaitlist: founderProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const rows = await db.execute(
+        sql`SELECT email, festival_id, festival_name, created_at FROM festival_waitlist ORDER BY created_at DESC`
+      ) as unknown as Array<{ email: string; festival_id: string; festival_name: string; created_at: string }>;
+      // Group by festival
+      const grouped: Record<string, { festivalId: string; festivalName: string; emails: Array<{ email: string; joinedAt: number }> }> = {};
+      for (const row of rows) {
+        const key = row.festival_id;
+        if (!grouped[key]) {
+          grouped[key] = { festivalId: row.festival_id, festivalName: row.festival_name, emails: [] };
+        }
+        grouped[key].emails.push({ email: row.email, joinedAt: Number(row.created_at) });
+      }
+      return {
+        total: rows.length,
+        festivals: Object.values(grouped).sort((a, b) => b.emails.length - a.emails.length),
+        raw: rows,
+      };
     }),
 });

@@ -480,6 +480,97 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Pricing ── */}
+      <section className="relative z-10 px-4 py-24">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="font-display font-bold text-4xl sm:text-5xl text-foreground mb-4">
+              Simple pricing.{" "}
+              <span className="text-gradient-pink">One-of-a-kind results.</span>
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-lg mx-auto">
+              No subscriptions. No hidden fees. Pay once, wear forever.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Concept Only */}
+            <div className="glass rounded-3xl p-8 flex flex-col">
+              <div className="mb-6">
+                <div className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "oklch(0.72 0.22 340)" }}>Concept</div>
+                <div className="font-display font-black text-4xl text-foreground">Free</div>
+                <div className="text-muted-foreground text-sm mt-1">Generate &amp; explore ideas</div>
+              </div>
+              <ul className="space-y-3 flex-1 mb-8">
+                {["AI concept directions", "Mood board images", "Color palette + materials", "Design packet preview"].map((item) => (
+                  <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.72 0.22 340 / 0.15)", color: "oklch(0.85 0.18 340)" }}>✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Button variant="outline" className="w-full rounded-2xl font-semibold" onClick={() => navigate("/festival-map")}>
+                Start Free
+              </Button>
+            </div>
+
+            {/* Full Garment — featured */}
+            <div
+              className="rounded-3xl p-8 flex flex-col relative overflow-hidden"
+              style={{ background: "oklch(0.72 0.22 340 / 0.12)", border: "1px solid oklch(0.72 0.22 340 / 0.4)" }}
+            >
+              <div className="absolute top-4 right-4">
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}>Most Popular</span>
+              </div>
+              <div className="mb-6">
+                <div className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "oklch(0.72 0.22 340)" }}>Full Garment</div>
+                <div className="font-display font-black text-4xl text-foreground">$350<span className="text-lg font-normal text-muted-foreground">+</span></div>
+                <div className="text-muted-foreground text-sm mt-1">Custom-made, delivered to you</div>
+              </div>
+              <ul className="space-y-3 flex-1 mb-8">
+                {["Everything in Concept", "FASHN photorealistic render", "Full production packet", "Vendor matching + outreach", "6–8 week delivery", "Founder review at every stage"].map((item) => (
+                  <li key={item} className="flex items-center gap-2 text-sm text-foreground">
+                    <span className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.72 0.22 340 / 0.15)", color: "oklch(0.85 0.18 340)" }}>✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Button
+                className="w-full rounded-2xl font-bold glow-pink"
+                style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
+                onClick={() => navigate("/festival-map")}
+              >
+                Design My Look
+              </Button>
+            </div>
+
+            {/* Rush */}
+            <div className="glass rounded-3xl p-8 flex flex-col">
+              <div className="mb-6">
+                <div className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "oklch(0.80 0.18 60)" }}>Rush</div>
+                <div className="font-display font-black text-4xl text-foreground">$550<span className="text-lg font-normal text-muted-foreground">+</span></div>
+                <div className="text-muted-foreground text-sm mt-1">Festival in under 3 weeks</div>
+              </div>
+              <ul className="space-y-3 flex-1 mb-8">
+                {["Everything in Full Garment", "Priority vendor queue", "Expedited production", "2–3 week delivery", "Daily status updates"].map((item) => (
+                  <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.80 0.18 60 / 0.15)", color: "oklch(0.80 0.18 60)" }}>✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Button variant="outline" className="w-full rounded-2xl font-semibold" onClick={() => navigate("/festival-map")}>
+                Rush My Order
+              </Button>
+            </div>
+          </div>
+
+          <p className="text-center text-muted-foreground text-xs mt-8">
+            Final price depends on garment complexity, materials, and quantity. All quotes confirmed before production begins.
+          </p>
+        </div>
+      </section>
+
       {/* ── Nebula image strip ── */}
       <section className="relative z-10 px-4 py-16">
         <div className="max-w-6xl mx-auto">
