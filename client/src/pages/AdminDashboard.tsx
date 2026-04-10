@@ -127,18 +127,36 @@ function OrderRow({ order, onAdvance, isAdvancing }: { order: any; onAdvance: (o
 
 // ── Pipeline detail modal ─────────────────────────────────────────────────────
 function PipelineDetail({ requestId, onClose }: { requestId: number; onClose: () => void }) {
-  const { data, isLoading } = trpc.admin.getFullPipeline.useQuery({ designRequestId: requestId });
+  const { data, isLoading, refetch } = trpc.admin.getFullPipeline.useQuery({ designRequestId: requestId });
+  const [selectedVendorId, setSelectedVendorId] = useState<number | null>(null);
+  const [orderNotes, setOrderNotes] = useState("");
+  const [showCreateOrder, setShowCreateOrder] = useState(false);
+
+  const matchVendorsMutation = trpc.production.matchVendors.useMutation({
+    onSuccess: () => refetch(),
+  });
+  const createOrderMutation = trpc.production.createOrder.useMutation({
+    onSuccess: () => { refetch(); setShowCreateOrder(false); setSelectedVendorId(null); setOrderNotes(""); },
+  });
+
+  const hasPacket = !!data?.packet;
+  const hasVendorScores = (data?.vendorScores?.length ?? 0) > 0;
+  const hasOrders = (data?.orders?.length ?? 0) > 0;
+  const sortedScores = [...(data?.vendorScores ?? [])].sort((a: any, b: any) => a.vendorRank - b.vendorRank);
+  const topVendor = sortedScores[0];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "oklch(0.06 0.02 300 / 0.8)", backdropFilter: "blur(20px)" }}>
-      <div className="glass-strong rounded-3xl w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "oklch(0.06 0.02 300 / 0.85)", backdropFilter: "blur(20px)" }}>
+      <div className="glass-strong rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-border">
           <h3 className="font-display font-bold text-lg text-foreground">Request #{requestId} — Full Pipeline</h3>
           <Button variant="ghost" size="sm" onClick={onClose} className="text-muted-foreground hover:text-foreground">✕</Button>
         </div>
 
         {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground">Loading pipeline...</div>
+          <div className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin" />Loading pipeline...
+          </div>
         ) : data ? (
           <div className="p-6 space-y-6">
             {/* Request info */}
@@ -149,27 +167,21 @@ function PipelineDetail({ requestId, onClose }: { requestId: number; onClose: ()
                   <StatusBadge status={data.request.status} />
                   <span className="text-xs text-muted-foreground">{data.request.budgetBand}</span>
                 </div>
-                <p className="text-sm text-foreground">
-                  Vibe: {(data.request.vibeKeywords as string[])?.join(", ")}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Colors: {(data.request.colors as string[])?.join(", ")}
-                </p>
+                <p className="text-sm text-foreground">Vibe: {(data.request.vibeKeywords as string[])?.join(", ")}</p>
+                <p className="text-sm text-muted-foreground">Colors: {(data.request.colors as string[])?.join(", ")}</p>
               </div>
             </div>
 
             {/* Concepts */}
             {data.concepts.length > 0 && (
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-                  Concept Cards ({data.concepts.length})
-                </p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Concept Cards ({data.concepts.length})</p>
                 <div className="space-y-2">
                   {data.concepts.map((c: any) => (
                     <div key={c.id} className="glass rounded-2xl p-3 flex items-center justify-between">
                       <div>
                         <span className="font-semibold text-sm text-foreground">{c.storyName}</span>
-                        <span className="ml-2 text-xs text-muted-foreground">{c.manufacturabilityScore}% viable</span>
+                        <span className="ml-2 text-xs text-muted-foreground">{Math.round((c.manufacturabilityScore ?? 0) * 100)}% viable</span>
                       </div>
                       {c.isSelected && (
                         <span className="text-xs font-semibold" style={{ color: "oklch(0.72 0.22 340)" }}>Selected ✓</span>
@@ -185,8 +197,8 @@ function PipelineDetail({ requestId, onClose }: { requestId: number; onClose: ()
               <div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Design Packet</p>
                 <div className="glass rounded-2xl p-4">
-                    <p className="text-sm font-semibold text-foreground mb-1">{data.packet.storyName}</p>
-                  <p className="text-xs text-muted-foreground">Risk score: {(data.packet.productionRiskScore * 100).toFixed(0)}/100</p>
+                  <p className="text-sm font-semibold text-foreground mb-1">{data.packet.storyName}</p>
+                  <p className="text-xs text-muted-foreground">Production risk: {(data.packet.productionRiskScore * 100).toFixed(0)}/100</p>
                   {data.packet.fileUrl && (
                     <a href={data.packet.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs mt-2 block" style={{ color: "oklch(0.72 0.22 340)" }}>
                       View packet JSON →
@@ -196,18 +208,57 @@ function PipelineDetail({ requestId, onClose }: { requestId: number; onClose: ()
               </div>
             )}
 
+            {/* ── Match Vendors action ── */}
+            {hasPacket && !hasVendorScores && (
+              <div
+                className="rounded-2xl p-4 flex items-center justify-between gap-4"
+                style={{ background: "oklch(0.72 0.22 340 / 0.08)", border: "1px solid oklch(0.72 0.22 340 / 0.25)" }}
+              >
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Vendor Matching</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Run AI vendor scoring to rank all vendors against this design packet.</p>
+                  {matchVendorsMutation.isError && (
+                    <p className="text-xs mt-1" style={{ color: "oklch(0.72 0.22 20)" }}>Error: {matchVendorsMutation.error?.message}</p>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  className="flex-shrink-0 text-xs font-bold gap-1.5"
+                  style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
+                  disabled={matchVendorsMutation.isPending}
+                  onClick={() => matchVendorsMutation.mutate({ designPacketId: data.packet!.id, designRequestId: requestId })}
+                >
+                  {matchVendorsMutation.isPending ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" />Matching...</>
+                  ) : (
+                    <><Zap className="w-3 h-3" />Match Vendors</>
+                  )}
+                </Button>
+              </div>
+            )}
+
             {/* Vendor scores */}
-            {data.vendorScores.length > 0 && (
+            {hasVendorScores && (
               <div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Vendor Rankings</p>
                 <div className="space-y-2">
-                  {data.vendorScores.map((vs: any) => (
-                    <div key={vs.id} className="glass rounded-2xl p-3 flex items-center justify-between">
-                      <span className="text-sm text-foreground">Vendor #{vs.vendorId}</span>
+                  {sortedScores.map((vs: any) => (
+                    <div
+                      key={vs.id}
+                      className="glass rounded-2xl p-3 flex items-center justify-between"
+                      style={vs.vendorRank === 1 ? { border: "1px solid oklch(0.72 0.22 340 / 0.4)" } : {}}
+                    >
+                      <div className="flex items-center gap-2">
+                        {vs.vendorRank === 1 && <Star className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.80 0.18 60)" }} />}
+                        <div>
+                          <span className="font-semibold text-sm text-foreground">{vs.vendorName ?? `Vendor #${vs.vendorId}`}</span>
+                          {vs.vendorEmail && <span className="ml-2 text-xs text-muted-foreground">{vs.vendorEmail}</span>}
+                        </div>
+                      </div>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">#{vs.vendorRank}</span>
                         <span className="font-bold text-sm" style={{ color: "oklch(0.72 0.22 340)" }}>
-                          {vs.totalScore?.toFixed(1)}
+                          {(vs.totalScore * 100).toFixed(0)}pts
                         </span>
                       </div>
                     </div>
@@ -216,14 +267,102 @@ function PipelineDetail({ requestId, onClose }: { requestId: number; onClose: ()
               </div>
             )}
 
+            {/* ── Create Order action ── */}
+            {hasPacket && hasVendorScores && !hasOrders && (
+              <div
+                className="rounded-2xl p-4"
+                style={{ background: "oklch(0.72 0.22 160 / 0.08)", border: "1px solid oklch(0.72 0.22 160 / 0.25)" }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Create Production Order</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Select a vendor and initiate the production pipeline.</p>
+                  </div>
+                  {!showCreateOrder && (
+                    <Button
+                      size="sm"
+                      className="flex-shrink-0 text-xs font-bold gap-1.5"
+                      style={{ background: "oklch(0.72 0.22 160 / 0.2)", color: "oklch(0.78 0.20 160)", border: "1px solid oklch(0.72 0.22 160 / 0.4)" }}
+                      onClick={() => { setShowCreateOrder(true); setSelectedVendorId(topVendor?.vendorId ?? null); }}
+                    >
+                      <Package className="w-3 h-3" />
+                      Create Order
+                    </Button>
+                  )}
+                </div>
+                {showCreateOrder && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1.5">Select Vendor</label>
+                      <div className="space-y-1.5">
+                        {sortedScores.map((vs: any) => (
+                          <button
+                            key={vs.vendorId}
+                            onClick={() => setSelectedVendorId(vs.vendorId)}
+                            className="w-full flex items-center justify-between p-3 rounded-xl text-left transition-all"
+                            style={{
+                              background: selectedVendorId === vs.vendorId ? "oklch(0.72 0.22 340 / 0.15)" : "oklch(0.12 0.02 300)",
+                              border: selectedVendorId === vs.vendorId ? "1px solid oklch(0.72 0.22 340 / 0.5)" : "1px solid oklch(0.20 0.03 300)",
+                            }}
+                          >
+                            <span className="text-sm font-medium text-foreground">{vs.vendorName ?? `Vendor #${vs.vendorId}`}</span>
+                            <span className="text-xs text-muted-foreground">#{vs.vendorRank} · {(vs.totalScore * 100).toFixed(0)}pts</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1.5">Notes (optional)</label>
+                      <textarea
+                        className="w-full rounded-xl p-3 text-sm text-foreground resize-none"
+                        style={{ background: "oklch(0.12 0.02 300)", border: "1px solid oklch(0.20 0.03 300)", minHeight: 64 }}
+                        placeholder="Any notes for this order..."
+                        value={orderNotes}
+                        onChange={(e) => setOrderNotes(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1 text-sm font-bold gap-1.5"
+                        style={{ background: "oklch(0.72 0.22 160)", color: "oklch(0.06 0.02 300)" }}
+                        disabled={!selectedVendorId || createOrderMutation.isPending}
+                        onClick={() => {
+                          if (!selectedVendorId || !data.packet) return;
+                          createOrderMutation.mutate({
+                            designRequestId: requestId,
+                            designPacketId: data.packet.id,
+                            vendorId: selectedVendorId,
+                            notes: orderNotes || undefined,
+                          });
+                        }}
+                      >
+                        {createOrderMutation.isPending ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" />Creating...</>
+                        ) : (
+                          <><Truck className="w-4 h-4" />Confirm & Create Order</>
+                        )}
+                      </Button>
+                      <Button variant="outline" className="text-sm" onClick={() => setShowCreateOrder(false)}>Cancel</Button>
+                    </div>
+                    {createOrderMutation.isError && (
+                      <p className="text-xs" style={{ color: "oklch(0.72 0.22 20)" }}>Error: {createOrderMutation.error?.message}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Orders */}
-            {data.orders.length > 0 && (
+            {hasOrders && (
               <div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Production Orders</p>
                 <div className="space-y-2">
                   {data.orders.map((o: any) => (
                     <div key={o.id} className="glass rounded-2xl p-3 flex items-center justify-between">
-                      <span className="text-sm text-foreground">Order #{o.id}</span>
+                      <div>
+                        <span className="text-sm text-foreground font-semibold">Order #{o.id}</span>
+                        {o.notes && <p className="text-xs text-muted-foreground mt-0.5">{o.notes}</p>}
+                      </div>
                       <StageBadge stage={o.currentStage} />
                     </div>
                   ))}

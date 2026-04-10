@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Sparkles, Plus, MessageSquare, Package, Clock, ChevronRight, Zap, Check } from "lucide-react";
+import { ArrowLeft, Sparkles, Plus, MessageSquare, Package, Clock, ChevronRight, Zap, Check, Truck } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -21,14 +21,19 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   complete: { label: "Complete", color: "oklch(0.78 0.20 160)" },
 };
 
+// Statuses that have a production order to track
+const TRACKABLE_STATUSES = new Set(["in_production", "complete", "approved"]);
+
 function ThreadCard({
   thread,
   index,
   onResume,
+  onTrackOrder,
 }: {
   thread: any;
   index: number;
   onResume: () => void;
+  onTrackOrder: () => void;
 }) {
   const selectedConcept = thread.selectedConcept;
   const firstConcept = thread.concepts?.[0];
@@ -44,11 +49,11 @@ function ThreadCard({
   const createdAt = new Date(thread.createdAt);
   const timeAgo = formatTimeAgo(createdAt);
   const vibeKeywords = (thread.vibeKeywords as string[]) ?? [];
+  const isTrackable = TRACKABLE_STATUSES.has(thread.status) && !!selectedConcept;
 
   return (
     <div
-      className="group relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-300 hover:ring-1 hover:ring-primary/40"
-      onClick={onResume}
+      className="group relative rounded-3xl overflow-hidden transition-all duration-300 hover:ring-1 hover:ring-primary/40"
       style={{ minHeight: 220 }}
     >
       {/* Background image */}
@@ -121,11 +126,27 @@ function ThreadCard({
               </span>
             </div>
           </div>
-          <div
-            className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all group-hover:scale-110"
-            style={{ background: "oklch(0.72 0.22 340 / 0.2)", border: "1px solid oklch(0.72 0.22 340 / 0.4)" }}
-          >
-            <ChevronRight className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
+          <div className="flex flex-col gap-1.5 flex-shrink-0">
+            {/* Track Order button — only for approved/in_production sessions */}
+            {isTrackable && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onTrackOrder(); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:opacity-90"
+                style={{ background: "oklch(0.72 0.22 160 / 0.25)", color: "oklch(0.78 0.20 160)", border: "1px solid oklch(0.72 0.22 160 / 0.4)" }}
+              >
+                <Truck className="w-3 h-3" />
+                Track Order
+              </button>
+            )}
+            {/* Resume button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onResume(); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-90"
+              style={{ background: "oklch(0.72 0.22 340 / 0.2)", color: "oklch(0.85 0.18 340)", border: "1px solid oklch(0.72 0.22 340 / 0.4)" }}
+            >
+              <ChevronRight className="w-3 h-3" />
+              {selectedConcept ? "View Design" : "Continue"}
+            </button>
           </div>
         </div>
 
@@ -280,6 +301,7 @@ export default function MyDesigns() {
                 thread={thread}
                 index={i}
                 onResume={() => navigate(`/design-studio?requestId=${thread.id}`)}
+                onTrackOrder={() => navigate(`/my-order?requestId=${thread.id}`)}
               />
             ))}
           </div>

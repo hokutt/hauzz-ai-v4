@@ -38,6 +38,13 @@ export const adminRouter = router({
 
       // Get vendor scores if packet exists
       const vendorScores = packet ? await getVendorScoresByPacketId(packet.id) : [];
+      // Always return all active vendors so admin can create orders and see vendor names
+      const allVendors = await getAllVendors();
+      // Enrich vendor scores with vendor names
+      const enrichedVendorScores = vendorScores.map((vs) => {
+        const vendor = allVendors.find((v) => v.id === vs.vendorId);
+        return { ...vs, vendorName: vendor?.name ?? `Vendor #${vs.vendorId}`, vendorEmail: vendor?.contactEmail ?? null };
+      });
 
       return {
         request,
@@ -45,7 +52,8 @@ export const adminRouter = router({
         approvalHistory,
         packet,
         orders,
-        vendorScores,
+        vendorScores: enrichedVendorScores,
+        allVendors,
       };
     }),
 

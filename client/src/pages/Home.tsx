@@ -112,6 +112,16 @@ export default function Home() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Guest-to-auth recovery: if user just signed in and has a pending guest session, redirect them back
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const guestRequestId = localStorage.getItem("hauzz_guest_request_id");
+    if (guestRequestId) {
+      localStorage.removeItem("hauzz_guest_request_id");
+      navigate(`/design-studio?requestId=${guestRequestId}`);
+    }
+  }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const particles = [
     { width: 6, height: 6, top: "15%", left: "8%", animationDelay: "0s", animationDuration: "4s" },
     { width: 4, height: 4, top: "25%", right: "12%", animationDelay: "1s", animationDuration: "5s" },

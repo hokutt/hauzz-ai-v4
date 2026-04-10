@@ -697,7 +697,9 @@ export default function DesignStudio() {
         conceptCardId: conceptId,
         notes: `Selected via Design Studio — ${concept.storyName}`,
       });
-      addMessage("assistant", `✅ **Design packet created.** Your founder will review vendor matches and initiate production. You'll receive updates as your garment moves through each stage.\n\nExpected timeline: **6–8 weeks** from approval to delivery.`);
+      // Auto-open the packet modal after a short delay so the user sees the success message first
+      setTimeout(() => setShowPacketModal(true), 2000);
+      addMessage("assistant", `✅ **Design packet created.** Your full garment spec is ready — opening it now so you can review materials, palette, and construction notes.\n\nYour founder will review vendor matches and initiate production. Expected timeline: **6–8 weeks** from approval to delivery.`);
     } catch (err: any) {
       addMessage("assistant", `Concept selected! Your design is being processed. ${err?.message ? `(Note: ${err.message})` : ""}`);
     }
