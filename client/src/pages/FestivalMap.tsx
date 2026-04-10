@@ -421,164 +421,554 @@ function PlanetSurface({ detail, size, hue }: { detail: Festival["theme"]["detai
   const cy = r;
 
   switch (detail) {
+
+    // ── EDC Las Vegas: Electric storm world ──────────────────────────────────
     case "electric":
       return (
         <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "screen" }}>
-          {/* Lightning band 1 */}
-          <ellipse cx={cx} cy={cy * 0.55} rx={r * 0.85} ry={r * 0.08} fill={`oklch(0.90 0.22 ${hue} / 0.35)`} />
-          <ellipse cx={cx} cy={cy * 0.75} rx={r * 0.70} ry={r * 0.05} fill={`oklch(0.85 0.20 ${hue} / 0.25)`} />
-          <ellipse cx={cx} cy={cy * 1.3} rx={r * 0.60} ry={r * 0.04} fill={`oklch(0.85 0.20 ${hue} / 0.20)`} />
-          {/* Neon spark dots */}
-          {[...Array(8)].map((_, i) => (
-            <circle
-              key={i}
-              cx={cx + Math.cos((i / 8) * Math.PI * 2) * r * 0.55}
-              cy={cy + Math.sin((i / 8) * Math.PI * 2) * r * 0.55}
-              r={2.5}
-              fill={`oklch(0.95 0.18 ${hue} / 0.7)`}
-            />
-          ))}
-        </svg>
-      );
-    case "dreamy":
-      return (
-        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "screen" }}>
-          {/* Soft cloud bands */}
-          <ellipse cx={cx * 0.9} cy={cy * 0.6} rx={r * 0.55} ry={r * 0.14} fill={`oklch(0.92 0.10 ${hue} / 0.30)`} />
-          <ellipse cx={cx * 1.1} cy={cy * 0.9} rx={r * 0.45} ry={r * 0.10} fill={`oklch(0.88 0.12 ${hue} / 0.25)`} />
-          <ellipse cx={cx * 0.85} cy={cy * 1.25} rx={r * 0.50} ry={r * 0.09} fill={`oklch(0.85 0.14 ${hue} / 0.20)`} />
-          {/* Pastel sparkle dots */}
-          {[...Array(6)].map((_, i) => (
-            <circle
-              key={i}
-              cx={cx + Math.cos((i / 6) * Math.PI * 2 + 0.5) * r * 0.45}
-              cy={cy + Math.sin((i / 6) * Math.PI * 2 + 0.5) * r * 0.45}
-              r={3}
-              fill={`oklch(0.95 0.08 ${hue} / 0.6)`}
-            />
-          ))}
-        </svg>
-      );
-    case "industrial":
-      return (
-        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "overlay" }}>
-          {/* Crater rings */}
-          <circle cx={cx * 0.65} cy={cy * 0.7} r={r * 0.18} fill="none" stroke={`oklch(0.70 0.18 ${hue} / 0.4)`} strokeWidth="2" />
-          <circle cx={cx * 1.3} cy={cy * 1.2} r={r * 0.12} fill="none" stroke={`oklch(0.65 0.16 ${hue} / 0.35)`} strokeWidth="1.5" />
-          <circle cx={cx * 0.9} cy={cy * 1.4} r={r * 0.08} fill="none" stroke={`oklch(0.60 0.14 ${hue} / 0.3)`} strokeWidth="1" />
-          {/* Grid lines */}
-          <line x1={cx - r * 0.7} y1={cy * 0.85} x2={cx + r * 0.7} y2={cy * 0.85} stroke={`oklch(0.70 0.16 ${hue} / 0.2)`} strokeWidth="1" />
-          <line x1={cx - r * 0.5} y1={cy * 1.15} x2={cx + r * 0.5} y2={cy * 1.15} stroke={`oklch(0.70 0.16 ${hue} / 0.15)`} strokeWidth="1" />
-        </svg>
-      );
-    case "wasteland":
-      return (
-        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "overlay" }}>
-          {/* Cracked terrain lines */}
-          <path d={`M ${cx * 0.5} ${cy * 0.7} L ${cx * 0.8} ${cy * 1.0} L ${cx * 0.6} ${cy * 1.3}`} fill="none" stroke={`oklch(0.65 0.16 ${hue} / 0.45)`} strokeWidth="1.5" />
-          <path d={`M ${cx * 1.2} ${cy * 0.8} L ${cx * 1.4} ${cy * 1.1} L ${cx * 1.1} ${cy * 1.4}`} fill="none" stroke={`oklch(0.60 0.14 ${hue} / 0.35)`} strokeWidth="1" />
-          {/* Radiation circles */}
-          <circle cx={cx} cy={cy} r={r * 0.25} fill="none" stroke={`oklch(0.72 0.18 ${hue} / 0.20)`} strokeWidth="1" strokeDasharray="4 4" />
-          <circle cx={cx} cy={cy} r={r * 0.45} fill="none" stroke={`oklch(0.68 0.16 ${hue} / 0.12)`} strokeWidth="1" strokeDasharray="6 6" />
-        </svg>
-      );
-    case "nocturnal":
-      return (
-        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "screen" }}>
-          {/* Star cluster dots */}
-          {[...Array(12)].map((_, i) => {
-            const angle = (i / 12) * Math.PI * 2;
-            const dist = r * (0.25 + Math.random() * 0.35);
+          <defs>
+            <radialGradient id="edcGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor={`oklch(0.95 0.25 ${hue})`} stopOpacity="0.4" />
+              <stop offset="100%" stopColor={`oklch(0.95 0.25 ${hue})`} stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          {/* Plasma atmosphere pulse */}
+          <circle cx={cx} cy={cy} r={r * 0.88} fill="url(#edcGlow)" />
+          {/* Neon equatorial band */}
+          <ellipse cx={cx} cy={cy} rx={r * 0.88} ry={r * 0.10} fill={`oklch(0.92 0.28 ${hue} / 0.50)`} />
+          <ellipse cx={cx} cy={cy} rx={r * 0.88} ry={r * 0.04} fill={`oklch(1.0 0.30 ${hue} / 0.70)`} />
+          {/* Secondary bands */}
+          <ellipse cx={cx} cy={cy - r * 0.32} rx={r * 0.75} ry={r * 0.055} fill={`oklch(0.88 0.24 ${hue} / 0.38)`} />
+          <ellipse cx={cx} cy={cy + r * 0.32} rx={r * 0.75} ry={r * 0.055} fill={`oklch(0.88 0.24 ${hue} / 0.38)`} />
+          <ellipse cx={cx} cy={cy - r * 0.58} rx={r * 0.55} ry={r * 0.035} fill={`oklch(0.85 0.20 ${hue} / 0.25)`} />
+          <ellipse cx={cx} cy={cy + r * 0.58} rx={r * 0.55} ry={r * 0.035} fill={`oklch(0.85 0.20 ${hue} / 0.25)`} />
+          {/* Lightning bolt 1 */}
+          <polyline
+            points={`${cx - r*0.05},${cy - r*0.55} ${cx - r*0.18},${cy - r*0.18} ${cx - r*0.02},${cy - r*0.18} ${cx - r*0.20},${cy + r*0.28}`}
+            fill="none" stroke={`oklch(1.0 0.28 ${hue})`} strokeWidth="2.5" strokeLinejoin="round" opacity="0.85"
+          />
+          {/* Lightning bolt 2 (smaller, right side) */}
+          <polyline
+            points={`${cx + r*0.30},${cy - r*0.40} ${cx + r*0.18},${cy - r*0.05} ${cx + r*0.28},${cy - r*0.05} ${cx + r*0.14},${cy + r*0.30}`}
+            fill="none" stroke={`oklch(1.0 0.28 ${hue})`} strokeWidth="1.8" strokeLinejoin="round" opacity="0.60"
+          />
+          {/* Spark constellation ring */}
+          {[0,1,2,3,4,5,6,7,8,9,10,11].map((i) => {
+            const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
+            const rr = r * (i % 3 === 0 ? 0.72 : 0.62);
+            const sr = i % 3 === 0 ? 3.5 : 2;
+            return <circle key={i} cx={cx + Math.cos(a)*rr} cy={cy + Math.sin(a)*rr} r={sr} fill={`oklch(1.0 0.25 ${hue})`} opacity={i % 3 === 0 ? 0.95 : 0.55} />;
+          })}
+          {/* EDC daisy petal ring (center) */}
+          {[0,1,2,3,4,5].map((i) => {
+            const a = (i / 6) * Math.PI * 2;
             return (
-              <circle
-                key={i}
-                cx={cx + Math.cos(angle) * dist}
-                cy={cy + Math.sin(angle) * dist}
-                r={1.5 + Math.random() * 2}
-                fill={`oklch(0.95 0.08 ${hue} / ${0.4 + Math.random() * 0.4})`}
+              <ellipse key={i}
+                cx={cx + Math.cos(a) * r * 0.22}
+                cy={cy + Math.sin(a) * r * 0.22}
+                rx={r * 0.09} ry={r * 0.05}
+                fill={`oklch(1.0 0.28 ${hue} / 0.45)`}
+                transform={`rotate(${(a * 180) / Math.PI}, ${cx + Math.cos(a) * r * 0.22}, ${cy + Math.sin(a) * r * 0.22})`}
               />
             );
           })}
-          {/* Crescent highlight */}
-          <ellipse cx={cx * 0.72} cy={cy * 0.72} rx={r * 0.22} ry={r * 0.10} fill={`oklch(0.85 0.14 ${hue} / 0.25)`} transform={`rotate(-35, ${cx}, ${cy})`} />
+          <circle cx={cx} cy={cy} r={r * 0.07} fill={`oklch(1.0 0.30 ${hue})`} opacity="0.9" />
         </svg>
       );
+
+    // ── Lost In Dreams: Dreamy aurora nebula world ───────────────────────────
+    case "dreamy":
+      return (
+        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "screen" }}>
+          <defs>
+            <radialGradient id="dreamCore" cx="40%" cy="40%" r="55%">
+              <stop offset="0%" stopColor="oklch(0.95 0.12 300)" stopOpacity="0.45" />
+              <stop offset="60%" stopColor={`oklch(0.80 0.18 ${hue})`} stopOpacity="0.20" />
+              <stop offset="100%" stopColor="transparent" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <circle cx={cx} cy={cy} r={r * 0.88} fill="url(#dreamCore)" />
+          {/* Aurora ribbon 1 */}
+          <path d={`M ${cx - r*0.85} ${cy - r*0.15} C ${cx - r*0.4} ${cy - r*0.55}, ${cx + r*0.3} ${cy - r*0.45}, ${cx + r*0.85} ${cy - r*0.10}`}
+            fill="none" stroke={`oklch(0.92 0.14 300 / 0.55)`} strokeWidth={r * 0.10} strokeLinecap="round" />
+          {/* Aurora ribbon 2 */}
+          <path d={`M ${cx - r*0.80} ${cy + r*0.10} C ${cx - r*0.3} ${cy + r*0.50}, ${cx + r*0.4} ${cy + r*0.40}, ${cx + r*0.80} ${cy + r*0.05}`}
+            fill="none" stroke={`oklch(0.88 0.16 ${hue} / 0.45)`} strokeWidth={r * 0.08} strokeLinecap="round" />
+          {/* Aurora ribbon 3 (thin) */}
+          <path d={`M ${cx - r*0.70} ${cy - r*0.40} C ${cx - r*0.2} ${cy - r*0.70}, ${cx + r*0.5} ${cy - r*0.60}, ${cx + r*0.72} ${cy - r*0.35}`}
+            fill="none" stroke={`oklch(0.95 0.10 260 / 0.35)`} strokeWidth={r * 0.05} strokeLinecap="round" />
+          {/* Floating dream bubbles */}
+          {[
+            [0.28, -0.50, 0.055, 0.80],
+            [-0.42, -0.28, 0.040, 0.65],
+            [0.52, 0.22, 0.048, 0.70],
+            [-0.30, 0.45, 0.038, 0.55],
+            [0.10, 0.58, 0.030, 0.60],
+            [-0.55, 0.10, 0.035, 0.50],
+            [0.40, -0.15, 0.025, 0.75],
+          ].map(([dx, dy, rr, op], i) => (
+            <circle key={i}
+              cx={cx + dx * r} cy={cy + dy * r} r={rr * r}
+              fill="none" stroke={`oklch(0.95 0.10 ${hue} / ${op})`} strokeWidth="1.2"
+            />
+          ))}
+          {/* Sparkle stars */}
+          {[
+            [0.18, -0.62], [-0.50, -0.38], [0.60, -0.22], [-0.18, 0.60], [0.42, 0.48], [-0.62, 0.28], [0.0, -0.72],
+          ].map(([dx, dy], i) => (
+            <g key={i} transform={`translate(${cx + dx! * r}, ${cy + dy! * r})`}>
+              <line x1="0" y1={-r*0.045} x2="0" y2={r*0.045} stroke={`oklch(1.0 0.08 ${hue})`} strokeWidth="1.5" opacity="0.85" />
+              <line x1={-r*0.045} y1="0" x2={r*0.045} y2="0" stroke={`oklch(1.0 0.08 ${hue})`} strokeWidth="1.5" opacity="0.85" />
+              <line x1={-r*0.030} y1={-r*0.030} x2={r*0.030} y2={r*0.030} stroke={`oklch(1.0 0.08 ${hue})`} strokeWidth="1" opacity="0.55" />
+              <line x1={r*0.030} y1={-r*0.030} x2={-r*0.030} y2={r*0.030} stroke={`oklch(1.0 0.08 ${hue})`} strokeWidth="1" opacity="0.55" />
+            </g>
+          ))}
+        </svg>
+      );
+
+    // ── HARD Summer: Scorched industrial hellscape ───────────────────────────
+    case "industrial":
+      return (
+        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "overlay" }}>
+          {/* Large impact crater (main) */}
+          <circle cx={cx - r*0.22} cy={cy - r*0.20} r={r * 0.30} fill={`oklch(0.15 0.06 ${hue} / 0.60)`} />
+          <circle cx={cx - r*0.22} cy={cy - r*0.20} r={r * 0.30} fill="none" stroke={`oklch(0.75 0.22 ${hue})`} strokeWidth="2.5" opacity="0.65" />
+          <circle cx={cx - r*0.22} cy={cy - r*0.20} r={r * 0.38} fill="none" stroke={`oklch(0.65 0.18 ${hue})`} strokeWidth="1" opacity="0.35" />
+          <circle cx={cx - r*0.22} cy={cy - r*0.20} r={r * 0.48} fill="none" stroke={`oklch(0.55 0.14 ${hue})`} strokeWidth="0.8" opacity="0.20" />
+          {/* Small crater top-right */}
+          <circle cx={cx + r*0.42} cy={cy - r*0.38} r={r * 0.14} fill={`oklch(0.12 0.05 ${hue} / 0.55)`} />
+          <circle cx={cx + r*0.42} cy={cy - r*0.38} r={r * 0.14} fill="none" stroke={`oklch(0.70 0.20 ${hue})`} strokeWidth="1.8" opacity="0.55" />
+          {/* Micro crater bottom */}
+          <circle cx={cx + r*0.20} cy={cy + r*0.50} r={r * 0.09} fill={`oklch(0.10 0.04 ${hue} / 0.50)`} />
+          <circle cx={cx + r*0.20} cy={cy + r*0.50} r={r * 0.09} fill="none" stroke={`oklch(0.65 0.18 ${hue})`} strokeWidth="1.5" opacity="0.45" />
+          {/* Heat fracture lines radiating from main crater */}
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((deg, i) => {
+            const rad = (deg * Math.PI) / 180;
+            const x1 = cx - r*0.22 + Math.cos(rad) * r * 0.30;
+            const y1 = cy - r*0.20 + Math.sin(rad) * r * 0.30;
+            const x2 = cx - r*0.22 + Math.cos(rad) * r * (0.50 + (i % 3) * 0.08);
+            const y2 = cy - r*0.20 + Math.sin(rad) * r * (0.50 + (i % 3) * 0.08);
+            return <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2} stroke={`oklch(0.72 0.20 ${hue})`} strokeWidth={1.2 - i*0.05} opacity={0.45 - i*0.02} />;
+          })}
+          {/* Lava vein lines */}
+          <path d={`M ${cx - r*0.52} ${cy + r*0.15} Q ${cx - r*0.10} ${cy + r*0.30} ${cx + r*0.35} ${cy + r*0.10}`}
+            fill="none" stroke={`oklch(0.80 0.28 ${hue})`} strokeWidth="2" opacity="0.55" strokeLinecap="round" />
+          <path d={`M ${cx + r*0.10} ${cy - r*0.60} Q ${cx + r*0.30} ${cy - r*0.30} ${cx + r*0.55} ${cy + r*0.20}`}
+            fill="none" stroke={`oklch(0.78 0.26 ${hue})`} strokeWidth="1.5" opacity="0.40" strokeLinecap="round" />
+          {/* HARD text suggestion: bold horizontal slash */}
+          <line x1={cx - r*0.55} y1={cy + r*0.70} x2={cx + r*0.55} y2={cy + r*0.70} stroke={`oklch(0.80 0.24 ${hue})`} strokeWidth="3" opacity="0.30" strokeLinecap="round" />
+          <line x1={cx - r*0.40} y1={cy + r*0.76} x2={cx + r*0.40} y2={cy + r*0.76} stroke={`oklch(0.80 0.24 ${hue})`} strokeWidth="2" opacity="0.18" strokeLinecap="round" />
+        </svg>
+      );
+
+    // ── Wasteland: Post-apocalyptic toxic world ──────────────────────────────
+    case "wasteland":
+      return (
+        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "overlay" }}>
+          {/* Radiation symbol — 3 blades */}
+          {[0, 120, 240].map((deg) => {
+            const rad = (deg * Math.PI) / 180;
+            const rad2 = ((deg + 60) * Math.PI) / 180;
+            const innerR = r * 0.14;
+            const outerR = r * 0.32;
+            const x1i = cx + Math.cos(rad) * innerR;
+            const y1i = cy + Math.sin(rad) * innerR;
+            const x2i = cx + Math.cos(rad2) * innerR;
+            const y2i = cy + Math.sin(rad2) * innerR;
+            const x1o = cx + Math.cos(rad) * outerR;
+            const y1o = cy + Math.sin(rad) * outerR;
+            const x2o = cx + Math.cos(rad2) * outerR;
+            const y2o = cy + Math.sin(rad2) * outerR;
+            return (
+              <path key={deg}
+                d={`M ${x1i} ${y1i} L ${x1o} ${y1o} A ${outerR} ${outerR} 0 0 1 ${x2o} ${y2o} L ${x2i} ${y2i} A ${innerR} ${innerR} 0 0 0 ${x1i} ${y1i} Z`}
+                fill={`oklch(0.78 0.22 ${hue} / 0.55)`}
+              />
+            );
+          })}
+          <circle cx={cx} cy={cy} r={r * 0.10} fill={`oklch(0.78 0.22 ${hue} / 0.80)`} />
+          <circle cx={cx} cy={cy} r={r * 0.14} fill="none" stroke={`oklch(0.78 0.22 ${hue})`} strokeWidth="1.5" opacity="0.60" />
+          <circle cx={cx} cy={cy} r={r * 0.36} fill="none" stroke={`oklch(0.72 0.18 ${hue})`} strokeWidth="1.5" opacity="0.45" />
+          {/* Outer dashed radiation rings */}
+          <circle cx={cx} cy={cy} r={r * 0.55} fill="none" stroke={`oklch(0.68 0.16 ${hue})`} strokeWidth="1.2" strokeDasharray="5 4" opacity="0.35" />
+          <circle cx={cx} cy={cy} r={r * 0.72} fill="none" stroke={`oklch(0.62 0.14 ${hue})`} strokeWidth="1" strokeDasharray="3 5" opacity="0.22" />
+          {/* Cracked terrain polygon mesh */}
+          <path d={`M ${cx - r*0.55} ${cy - r*0.10} L ${cx - r*0.20} ${cy - r*0.45} L ${cx + r*0.15} ${cy - r*0.20} L ${cx + r*0.50} ${cy - r*0.50} L ${cx + r*0.60} ${cy + r*0.05}`}
+            fill="none" stroke={`oklch(0.60 0.14 ${hue})`} strokeWidth="1.2" opacity="0.40" />
+          <path d={`M ${cx - r*0.60} ${cy + r*0.30} L ${cx - r*0.15} ${cy + r*0.55} L ${cx + r*0.25} ${cy + r*0.35} L ${cx + r*0.55} ${cy + r*0.60}`}
+            fill="none" stroke={`oklch(0.55 0.12 ${hue})`} strokeWidth="1" opacity="0.32" />
+          {/* Toxic drip spots */}
+          {[[-0.55, -0.55], [0.55, -0.45], [-0.48, 0.55], [0.50, 0.52]].map(([dx, dy], i) => (
+            <circle key={i} cx={cx + dx! * r} cy={cy + dy! * r} r={r * 0.04}
+              fill={`oklch(0.82 0.26 ${hue} / 0.65)`} />
+          ))}
+        </svg>
+      );
+
+    // ── Nocturnal Wonderland: Deep night sky constellation world ─────────────
+    case "nocturnal":
+      return (
+        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "screen" }}>
+          {/* Constellation: Orion-like pattern */}
+          {(() => {
+            const stars: [number, number, number][] = [
+              [0.05, -0.60, 3.5],   // top
+              [-0.28, -0.38, 2.5],  // left shoulder
+              [0.32, -0.32, 2.5],   // right shoulder
+              [-0.18, -0.05, 3.0],  // belt left
+              [0.05, -0.00, 2.8],   // belt center
+              [0.28, 0.05, 2.5],    // belt right
+              [-0.22, 0.38, 2.0],   // left foot
+              [0.30, 0.42, 2.0],    // right foot
+              [0.55, -0.55, 1.8],   // far right
+              [-0.55, 0.20, 1.5],   // far left
+              [0.10, 0.68, 1.5],    // bottom
+              [-0.40, -0.62, 1.8],  // top left
+            ];
+            const lines: [number, number][] = [
+              [1,3],[2,3],[3,4],[4,5],[5,6],[1,0],[2,0],[6,7],[3,9],[5,8],
+            ];
+            return (
+              <>
+                {lines.map(([a, b], i) => (
+                  <line key={i}
+                    x1={cx + stars[a][0] * r} y1={cy + stars[a][1] * r}
+                    x2={cx + stars[b][0] * r} y2={cy + stars[b][1] * r}
+                    stroke={`oklch(0.85 0.16 ${hue})`} strokeWidth="0.8" opacity="0.40"
+                  />
+                ))}
+                {stars.map(([dx, dy, sr], i) => (
+                  <circle key={i} cx={cx + dx * r} cy={cy + dy * r} r={sr}
+                    fill={`oklch(1.0 0.10 ${hue})`} opacity={sr > 3 ? 0.95 : 0.70}
+                  />
+                ))}
+              </>
+            );
+          })()}
+          {/* Crescent moon carved into surface */}
+          <circle cx={cx - r*0.35} cy={cy + r*0.40} r={r * 0.18} fill={`oklch(0.88 0.18 ${hue} / 0.50)`} />
+          <circle cx={cx - r*0.28} cy={cy + r*0.34} r={r * 0.14} fill={`oklch(0.12 0.06 ${hue} / 0.90)`} />
+          {/* Milky way band */}
+          <ellipse cx={cx + r*0.25} cy={cy - r*0.10} rx={r * 0.28} ry={r * 0.62}
+            fill={`oklch(0.75 0.14 ${hue} / 0.12)`} transform={`rotate(25, ${cx}, ${cy})`} />
+          {/* Glitter micro-dots */}
+          {[0.45,-0.30,0.60,-0.55,-0.65,0.25,0.15,0.70,-0.20,-0.70].map((v, i) => (
+            <circle key={`g${i}`}
+              cx={cx + v * r}
+              cy={cy + (i % 2 === 0 ? 0.55 : -0.45) * r * (i * 0.1 + 0.5)}
+              r={0.8 + (i % 3) * 0.5}
+              fill={`oklch(1.0 0.06 ${hue})`} opacity={0.5 + (i % 4) * 0.12}
+            />
+          ))}
+        </svg>
+      );
+
+    // ── EDC Korea: K-Rave cyber circuit world ────────────────────────────────
     case "krave":
       return (
         <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "screen" }}>
-          {/* Holographic bands */}
-          <ellipse cx={cx} cy={cy * 0.5} rx={r * 0.75} ry={r * 0.06} fill={`oklch(0.88 0.18 ${hue} / 0.30)`} />
-          <ellipse cx={cx} cy={cy * 0.8} rx={r * 0.65} ry={r * 0.05} fill={`oklch(0.85 0.16 200 / 0.25)`} />
-          <ellipse cx={cx} cy={cy * 1.2} rx={r * 0.55} ry={r * 0.04} fill={`oklch(0.82 0.14 220 / 0.20)`} />
-          <ellipse cx={cx} cy={cy * 1.5} rx={r * 0.45} ry={r * 0.04} fill={`oklch(0.80 0.12 ${hue} / 0.18)`} />
-          {/* Grid dots */}
-          {[...Array(5)].map((_, i) => (
-            <circle key={i} cx={cx + (i - 2) * r * 0.22} cy={cy} r={2} fill={`oklch(0.95 0.10 ${hue} / 0.5)`} />
+          <defs>
+            <linearGradient id="holoShift" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={`oklch(0.90 0.22 ${hue})`} stopOpacity="0.5" />
+              <stop offset="50%" stopColor="oklch(0.90 0.20 280)" stopOpacity="0.3" />
+              <stop offset="100%" stopColor={`oklch(0.88 0.22 ${hue})`} stopOpacity="0.5" />
+            </linearGradient>
+          </defs>
+          {/* Holographic shimmer overlay */}
+          <ellipse cx={cx} cy={cy} rx={r * 0.88} ry={r * 0.88} fill="url(#holoShift)" opacity="0.25" />
+          {/* Circuit board traces — horizontal */}
+          <line x1={cx - r*0.70} y1={cy - r*0.40} x2={cx - r*0.20} y2={cy - r*0.40} stroke={`oklch(0.90 0.22 ${hue})`} strokeWidth="1.5" opacity="0.65" />
+          <line x1={cx - r*0.20} y1={cy - r*0.40} x2={cx - r*0.20} y2={cy - r*0.10} stroke={`oklch(0.90 0.22 ${hue})`} strokeWidth="1.5" opacity="0.65" />
+          <line x1={cx - r*0.20} y1={cy - r*0.10} x2={cx + r*0.40} y2={cy - r*0.10} stroke={`oklch(0.90 0.22 ${hue})`} strokeWidth="1.5" opacity="0.65" />
+          <line x1={cx + r*0.40} y1={cy - r*0.10} x2={cx + r*0.40} y2={cy + r*0.30} stroke={`oklch(0.90 0.22 ${hue})`} strokeWidth="1.5" opacity="0.65" />
+          <line x1={cx + r*0.40} y1={cy + r*0.30} x2={cx + r*0.70} y2={cy + r*0.30} stroke={`oklch(0.90 0.22 ${hue})`} strokeWidth="1.5" opacity="0.65" />
+          {/* Circuit trace 2 */}
+          <line x1={cx - r*0.60} y1={cy + r*0.20} x2={cx - r*0.60} y2={cy + r*0.50} stroke={`oklch(0.85 0.18 200)`} strokeWidth="1.2" opacity="0.50" />
+          <line x1={cx - r*0.60} y1={cy + r*0.50} x2={cx + r*0.10} y2={cy + r*0.50} stroke={`oklch(0.85 0.18 200)`} strokeWidth="1.2" opacity="0.50" />
+          <line x1={cx + r*0.10} y1={cy + r*0.50} x2={cx + r*0.10} y2={cy + r*0.65} stroke={`oklch(0.85 0.18 200)`} strokeWidth="1.2" opacity="0.50" />
+          {/* Circuit nodes (solder pads) */}
+          {[
+            [cx - r*0.20, cy - r*0.40], [cx + r*0.40, cy - r*0.10],
+            [cx + r*0.40, cy + r*0.30], [cx - r*0.60, cy + r*0.20],
+            [cx + r*0.10, cy + r*0.50], [cx - r*0.70, cy - r*0.40],
+          ].map(([x, y], i) => (
+            <g key={i}>
+              <circle cx={x} cy={y} r={4.5} fill={`oklch(0.92 0.24 ${hue})`} opacity="0.80" />
+              <circle cx={x} cy={y} r={2.5} fill={`oklch(0.06 0.02 300)`} />
+            </g>
           ))}
+          {/* K-pop star burst center */}
+          {[0,45,90,135].map((deg) => {
+            const rad = (deg * Math.PI) / 180;
+            return (
+              <line key={deg}
+                x1={cx + Math.cos(rad) * r * 0.08} y1={cy + Math.sin(rad) * r * 0.08}
+                x2={cx + Math.cos(rad) * r * 0.22} y2={cy + Math.sin(rad) * r * 0.22}
+                stroke={`oklch(1.0 0.28 ${hue})`} strokeWidth="2.5" opacity="0.80" strokeLinecap="round"
+              />
+            );
+          })}
+          <circle cx={cx} cy={cy} r={r * 0.08} fill={`oklch(1.0 0.28 ${hue})`} opacity="0.90" />
+          {/* Neon pixel dot matrix (top right quadrant) */}
+          {[0,1,2,3,4].flatMap((row) =>
+            [0,1,2,3,4].map((col) => {
+              const px = cx + r*0.25 + col * r * 0.10;
+              const py = cy - r*0.65 + row * r * 0.10;
+              const on = (row + col) % 2 === 0;
+              return on ? <circle key={`${row}-${col}`} cx={px} cy={py} r={1.5} fill={`oklch(0.95 0.20 ${hue})`} opacity="0.55" /> : null;
+            })
+          )}
         </svg>
       );
+
+    // ── EDC Colombia: Tropical electric jungle world ─────────────────────────
     case "tropical":
       return (
         <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "screen" }}>
-          {/* Swirl bands */}
-          <ellipse cx={cx * 0.85} cy={cy * 0.65} rx={r * 0.50} ry={r * 0.12} fill={`oklch(0.82 0.20 ${hue} / 0.30)`} transform={`rotate(15, ${cx}, ${cy})`} />
-          <ellipse cx={cx * 1.1} cy={cy * 1.0} rx={r * 0.45} ry={r * 0.09} fill={`oklch(0.78 0.18 150 / 0.25)`} transform={`rotate(-10, ${cx}, ${cy})`} />
-          <ellipse cx={cx * 0.9} cy={cy * 1.35} rx={r * 0.40} ry={r * 0.08} fill={`oklch(0.75 0.16 ${hue} / 0.20)`} />
-          {/* Bright dots */}
-          {[...Array(5)].map((_, i) => (
-            <circle key={i} cx={cx + Math.cos((i / 5) * Math.PI * 2) * r * 0.38} cy={cy + Math.sin((i / 5) * Math.PI * 2) * r * 0.38} r={3} fill={`oklch(0.92 0.18 ${hue} / 0.55)`} />
+          {/* Tropical flower — 6 petals */}
+          {[0,60,120,180,240,300].map((deg) => {
+            const rad = (deg * Math.PI) / 180;
+            const px = cx + Math.cos(rad) * r * 0.32;
+            const py = cy + Math.sin(rad) * r * 0.32;
+            return (
+              <ellipse key={deg}
+                cx={px} cy={py}
+                rx={r * 0.18} ry={r * 0.10}
+                fill={`oklch(0.88 0.26 ${hue} / 0.55)`}
+                transform={`rotate(${deg}, ${px}, ${py})`}
+              />
+            );
+          })}
+          <circle cx={cx} cy={cy} r={r * 0.12} fill={`oklch(0.95 0.28 60 / 0.85)`} />
+          {/* Jungle canopy silhouette band */}
+          <path d={`M ${cx - r*0.88} ${cy + r*0.30}
+            Q ${cx - r*0.65} ${cy + r*0.05} ${cx - r*0.45} ${cy + r*0.25}
+            Q ${cx - r*0.25} ${cy + r*0.00} ${cx - r*0.05} ${cy + r*0.20}
+            Q ${cx + r*0.15} ${cy - r*0.05} ${cx + r*0.35} ${cy + r*0.18}
+            Q ${cx + r*0.55} ${cy + r*0.02} ${cx + r*0.75} ${cy + r*0.28}
+            L ${cx + r*0.88} ${cy + r*0.88} L ${cx - r*0.88} ${cy + r*0.88} Z`}
+            fill={`oklch(0.45 0.22 ${hue} / 0.40)`}
+          />
+          {/* Electric current arcs */}
+          <path d={`M ${cx - r*0.70} ${cy - r*0.50} Q ${cx} ${cy - r*0.80} ${cx + r*0.70} ${cy - r*0.50}`}
+            fill="none" stroke={`oklch(0.95 0.28 60 / 0.55)`} strokeWidth="2" strokeLinecap="round" />
+          <path d={`M ${cx - r*0.55} ${cy - r*0.60} Q ${cx} ${cy - r*0.90} ${cx + r*0.55} ${cy - r*0.60}`}
+            fill="none" stroke={`oklch(0.92 0.24 ${hue} / 0.35)`} strokeWidth="1.2" strokeLinecap="round" />
+          {/* Vibrant festival color burst dots */}
+          {[
+            [0.62, -0.42, 4, 0.80], [-0.58, -0.38, 3.5, 0.70],
+            [0.48, 0.55, 3, 0.65], [-0.50, 0.48, 3.5, 0.70],
+            [0.0, -0.72, 3, 0.75], [0.72, 0.15, 2.5, 0.60],
+          ].map(([dx, dy, sr, op], i) => (
+            <circle key={i} cx={cx + dx! * r} cy={cy + dy! * r} r={sr!}
+              fill={i % 2 === 0 ? `oklch(0.95 0.28 60)` : `oklch(0.90 0.26 ${hue})`}
+              opacity={op!}
+            />
           ))}
         </svg>
       );
+
+    // ── III Points: Miami art-deco minimal world ─────────────────────────────
     case "artdeco":
       return (
         <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "screen" }}>
-          {/* Concentric rings */}
-          <circle cx={cx} cy={cy} r={r * 0.30} fill="none" stroke={`oklch(0.75 0.16 ${hue} / 0.35)`} strokeWidth="1" />
-          <circle cx={cx} cy={cy} r={r * 0.50} fill="none" stroke={`oklch(0.70 0.14 ${hue} / 0.25)`} strokeWidth="1" />
-          <circle cx={cx} cy={cy} r={r * 0.70} fill="none" stroke={`oklch(0.65 0.12 ${hue} / 0.18)`} strokeWidth="1" />
-          {/* Cross lines */}
-          <line x1={cx - r * 0.72} y1={cy} x2={cx + r * 0.72} y2={cy} stroke={`oklch(0.72 0.14 ${hue} / 0.20)`} strokeWidth="0.8" />
-          <line x1={cx} y1={cy - r * 0.72} x2={cx} y2={cy + r * 0.72} stroke={`oklch(0.72 0.14 ${hue} / 0.20)`} strokeWidth="0.8" />
+          {/* Golden ratio spiral approximation */}
+          <path d={`
+            M ${cx} ${cy}
+            A ${r*0.12} ${r*0.12} 0 0 1 ${cx + r*0.12} ${cy}
+            A ${r*0.20} ${r*0.20} 0 0 1 ${cx + r*0.12} ${cy - r*0.20}
+            A ${r*0.32} ${r*0.32} 0 0 1 ${cx - r*0.20} ${cy - r*0.20}
+            A ${r*0.52} ${r*0.52} 0 0 1 ${cx - r*0.20} ${cy + r*0.32}
+            A ${r*0.72} ${r*0.72} 0 0 1 ${cx + r*0.52} ${cy + r*0.32}
+          `} fill="none" stroke={`oklch(0.80 0.20 ${hue})`} strokeWidth="1.8" opacity="0.55" strokeLinecap="round" />
+          {/* Concentric precision rings */}
+          <circle cx={cx} cy={cy} r={r * 0.22} fill="none" stroke={`oklch(0.80 0.20 ${hue})`} strokeWidth="1.5" opacity="0.60" />
+          <circle cx={cx} cy={cy} r={r * 0.40} fill="none" stroke={`oklch(0.75 0.18 ${hue})`} strokeWidth="1.0" opacity="0.45" />
+          <circle cx={cx} cy={cy} r={r * 0.58} fill="none" stroke={`oklch(0.70 0.16 ${hue})`} strokeWidth="0.8" opacity="0.32" />
+          <circle cx={cx} cy={cy} r={r * 0.76} fill="none" stroke={`oklch(0.65 0.14 ${hue})`} strokeWidth="0.6" opacity="0.22" />
+          {/* Art-deco radiating lines (8-fold) */}
+          {[0,45,90,135,180,225,270,315].map((deg) => {
+            const rad = (deg * Math.PI) / 180;
+            return (
+              <line key={deg}
+                x1={cx + Math.cos(rad) * r * 0.22}
+                y1={cy + Math.sin(rad) * r * 0.22}
+                x2={cx + Math.cos(rad) * r * 0.76}
+                y2={cy + Math.sin(rad) * r * 0.76}
+                stroke={`oklch(0.75 0.18 ${hue})`} strokeWidth={deg % 90 === 0 ? 1.5 : 0.8}
+                opacity={deg % 90 === 0 ? 0.50 : 0.28}
+              />
+            );
+          })}
+          {/* III Points triple dot motif */}
+          <circle cx={cx - r*0.12} cy={cy} r={r * 0.05} fill={`oklch(0.85 0.22 ${hue})`} opacity="0.90" />
+          <circle cx={cx} cy={cy} r={r * 0.05} fill={`oklch(0.85 0.22 ${hue})`} opacity="0.90" />
+          <circle cx={cx + r*0.12} cy={cy} r={r * 0.05} fill={`oklch(0.85 0.22 ${hue})`} opacity="0.90" />
+          {/* Bauhaus geometric accent — triangle */}
+          <polygon
+            points={`${cx},${cy - r*0.68} ${cx - r*0.20},${cy - r*0.42} ${cx + r*0.20},${cy - r*0.42}`}
+            fill="none" stroke={`oklch(0.80 0.20 ${hue})`} strokeWidth="1.5" opacity="0.45"
+          />
         </svg>
       );
+
+    // ── Beyond Wonderland: Alice rabbit hole fantasy world ───────────────────
     case "wonderland":
       return (
         <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "screen" }}>
-          {/* Candy swirl bands */}
-          <ellipse cx={cx * 0.8} cy={cy * 0.6} rx={r * 0.48} ry={r * 0.10} fill={`oklch(0.88 0.18 ${hue} / 0.30)`} transform={`rotate(20, ${cx}, ${cy})`} />
-          <ellipse cx={cx * 1.15} cy={cy * 0.95} rx={r * 0.42} ry={r * 0.08} fill={`oklch(0.82 0.20 300 / 0.25)`} transform={`rotate(-15, ${cx}, ${cy})`} />
-          <ellipse cx={cx * 0.9} cy={cy * 1.3} rx={r * 0.38} ry={r * 0.07} fill={`oklch(0.85 0.16 ${hue} / 0.20)`} />
-          {/* Sparkle dots */}
-          {[...Array(7)].map((_, i) => (
-            <circle key={i} cx={cx + Math.cos((i / 7) * Math.PI * 2) * r * 0.42} cy={cy + Math.sin((i / 7) * Math.PI * 2) * r * 0.42} r={2.5} fill={`oklch(0.95 0.12 ${hue} / 0.55)`} />
+          {/* Checkerboard patches */}
+          {[[-0.45, -0.45], [0.45, -0.45], [-0.45, 0.45], [0.45, 0.45]].map(([dx, dy], i) => (
+            <rect key={i}
+              x={cx + dx! * r - r*0.10} y={cy + dy! * r - r*0.10}
+              width={r * 0.20} height={r * 0.20}
+              fill={i % 2 === 0 ? `oklch(0.88 0.22 ${hue} / 0.45)` : `oklch(0.92 0.18 300 / 0.35)`}
+              rx="3"
+            />
           ))}
+          {/* Spiral tunnel (rabbit hole) */}
+          {[0.72, 0.55, 0.40, 0.28, 0.18, 0.10].map((rr, i) => (
+            <circle key={i} cx={cx} cy={cy} r={rr * r}
+              fill="none"
+              stroke={i % 2 === 0 ? `oklch(0.90 0.22 ${hue})` : `oklch(0.88 0.20 300)`}
+              strokeWidth={1.5 - i * 0.15}
+              strokeDasharray={i % 2 === 0 ? "none" : `${r*0.15} ${r*0.08}`}
+              opacity={0.55 - i * 0.05}
+            />
+          ))}
+          {/* Playing card suits */}
+          {/* Heart ♥ */}
+          <path d={`M ${cx - r*0.55} ${cy - r*0.62} C ${cx - r*0.55} ${cy - r*0.72}, ${cx - r*0.40} ${cy - r*0.72}, ${cx - r*0.40} ${cy - r*0.62} C ${cx - r*0.40} ${cy - r*0.72}, ${cx - r*0.25} ${cy - r*0.72}, ${cx - r*0.25} ${cy - r*0.62} L ${cx - r*0.40} ${cy - r*0.48} Z`}
+            fill={`oklch(0.80 0.28 10 / 0.70)`} />
+          {/* Diamond ♦ */}
+          <polygon points={`${cx + r*0.42},${cy - r*0.70} ${cx + r*0.52},${cy - r*0.58} ${cx + r*0.42},${cy - r*0.46} ${cx + r*0.32},${cy - r*0.58}`}
+            fill={`oklch(0.85 0.24 ${hue} / 0.70)`} />
+          {/* Spade ♠ */}
+          <path d={`M ${cx + r*0.42} ${cy + r*0.48} C ${cx + r*0.32} ${cy + r*0.38}, ${cx + r*0.28} ${cy + r*0.52}, ${cx + r*0.42} ${cy + r*0.62} C ${cx + r*0.56} ${cy + r*0.52}, ${cx + r*0.52} ${cy + r*0.38}, ${cx + r*0.42} ${cy + r*0.48} Z`}
+            fill={`oklch(0.88 0.20 300 / 0.65)`} />
+          {/* Club ♣ */}
+          <circle cx={cx - r*0.42} cy={cy + r*0.50} r={r*0.07} fill={`oklch(0.82 0.22 ${hue} / 0.65)`} />
+          <circle cx={cx - r*0.52} cy={cy + r*0.60} r={r*0.07} fill={`oklch(0.82 0.22 ${hue} / 0.65)`} />
+          <circle cx={cx - r*0.32} cy={cy + r*0.60} r={r*0.07} fill={`oklch(0.82 0.22 ${hue} / 0.65)`} />
+          <line x1={cx - r*0.42} y1={cy + r*0.57} x2={cx - r*0.42} y2={cy + r*0.70} stroke={`oklch(0.82 0.22 ${hue} / 0.65)`} strokeWidth="2" />
         </svg>
       );
+
+    // ── Electric Forest: Living enchanted forest world ───────────────────────
     case "forest":
       return (
         <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "overlay" }}>
-          {/* Organic terrain bands */}
-          <ellipse cx={cx * 0.9} cy={cy * 0.7} rx={r * 0.55} ry={r * 0.12} fill={`oklch(0.60 0.20 ${hue} / 0.35)`} transform={`rotate(8, ${cx}, ${cy})`} />
-          <ellipse cx={cx * 1.05} cy={cy * 1.05} rx={r * 0.50} ry={r * 0.10} fill={`oklch(0.55 0.18 140 / 0.28)`} />
-          <ellipse cx={cx * 0.85} cy={cy * 1.35} rx={r * 0.45} ry={r * 0.09} fill={`oklch(0.50 0.16 ${hue} / 0.22)`} />
-          {/* Organic dots */}
-          {[...Array(6)].map((_, i) => (
-            <circle key={i} cx={cx + Math.cos((i / 6) * Math.PI * 2 + 1) * r * 0.35} cy={cy + Math.sin((i / 6) * Math.PI * 2 + 1) * r * 0.35} r={3.5} fill={`oklch(0.72 0.20 ${hue} / 0.45)`} />
+          {/* Tree silhouette ring */}
+          {[-0.55, -0.28, 0.0, 0.28, 0.55].map((dx, i) => {
+            const baseY = cy + r * 0.30;
+            const h2 = r * (0.35 + (i % 2) * 0.15);
+            const w = r * 0.14;
+            return (
+              <g key={i}>
+                {/* Trunk */}
+                <rect x={cx + dx * r - r*0.025} y={baseY} width={r*0.05} height={r*0.12}
+                  fill={`oklch(0.40 0.14 ${hue} / 0.60)`} />
+                {/* Canopy triangle */}
+                <polygon
+                  points={`${cx + dx * r},${baseY - h2} ${cx + dx * r - w},${baseY} ${cx + dx * r + w},${baseY}`}
+                  fill={`oklch(0.55 0.22 ${hue} / 0.65)`}
+                />
+                {/* Second canopy layer */}
+                <polygon
+                  points={`${cx + dx * r},${baseY - h2 * 0.65} ${cx + dx * r - w*0.80},${baseY - h2*0.30} ${cx + dx * r + w*0.80},${baseY - h2*0.30}`}
+                  fill={`oklch(0.62 0.24 ${hue} / 0.55)`}
+                />
+              </g>
+            );
+          })}
+          {/* Root network paths */}
+          <path d={`M ${cx} ${cy + r*0.42} Q ${cx - r*0.30} ${cy + r*0.58} ${cx - r*0.55} ${cy + r*0.72}`}
+            fill="none" stroke={`oklch(0.45 0.16 ${hue})`} strokeWidth="1.8" opacity="0.55" strokeLinecap="round" />
+          <path d={`M ${cx} ${cy + r*0.42} Q ${cx + r*0.25} ${cy + r*0.60} ${cx + r*0.50} ${cy + r*0.70}`}
+            fill="none" stroke={`oklch(0.45 0.16 ${hue})`} strokeWidth="1.5" opacity="0.45" strokeLinecap="round" />
+          <path d={`M ${cx} ${cy + r*0.42} Q ${cx + r*0.05} ${cy + r*0.65} ${cx - r*0.10} ${cy + r*0.78}`}
+            fill="none" stroke={`oklch(0.42 0.14 ${hue})`} strokeWidth="1.2" opacity="0.38" strokeLinecap="round" />
+          {/* Firefly glow dots */}
+          {[
+            [-0.62, -0.30, 3.5, 0.85], [0.58, -0.45, 3.0, 0.80],
+            [-0.40, -0.62, 2.5, 0.75], [0.65, 0.10, 3.0, 0.80],
+            [-0.68, 0.25, 2.5, 0.70], [0.20, -0.70, 2.0, 0.75],
+            [0.42, -0.60, 2.0, 0.65], [-0.20, 0.68, 2.5, 0.70],
+          ].map(([dx, dy, sr, op], i) => (
+            <circle key={i} cx={cx + dx! * r} cy={cy + dy! * r} r={sr!}
+              fill={`oklch(0.92 0.28 ${hue})`} opacity={op!}
+            />
           ))}
+          {/* Mushroom caps (2) */}
+          <ellipse cx={cx - r*0.28} cy={cy + r*0.18} rx={r*0.10} ry={r*0.06}
+            fill={`oklch(0.70 0.26 ${hue} / 0.65)`} />
+          <rect x={cx - r*0.295} y={cy + r*0.18} width={r*0.03} height={r*0.08}
+            fill={`oklch(0.85 0.10 ${hue} / 0.50)`} />
+          <ellipse cx={cx + r*0.35} cy={cy + r*0.08} rx={r*0.08} ry={r*0.05}
+            fill={`oklch(0.72 0.24 ${hue} / 0.60)`} />
+          <rect x={cx + r*0.338} y={cy + r*0.08} width={r*0.024} height={r*0.07}
+            fill={`oklch(0.85 0.10 ${hue} / 0.45)`} />
         </svg>
       );
+
+    // ── Beyond Wonderland at the Gorge: Pacific Northwest scenic world ───────
     case "gorge":
       return (
         <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "overlay" }}>
-          {/* Layered terrain */}
-          <path d={`M ${cx * 0.3} ${cy * 1.1} Q ${cx * 0.8} ${cy * 0.6} ${cx * 1.3} ${cy * 0.9} Q ${cx * 1.6} ${cy * 1.1} ${cx * 1.7} ${cy * 1.4}`} fill="none" stroke={`oklch(0.65 0.16 ${hue} / 0.40)`} strokeWidth="2" />
-          <path d={`M ${cx * 0.2} ${cy * 1.3} Q ${cx * 0.7} ${cy * 0.9} ${cx * 1.2} ${cy * 1.1} Q ${cx * 1.5} ${cy * 1.25} ${cx * 1.8} ${cy * 1.5}`} fill="none" stroke={`oklch(0.58 0.14 ${hue} / 0.30)`} strokeWidth="1.5" />
-          {/* Summit dots */}
-          <circle cx={cx * 0.8} cy={cy * 0.62} r={4} fill={`oklch(0.80 0.16 ${hue} / 0.50)`} />
-          <circle cx={cx * 1.3} cy={cy * 0.88} r={3} fill={`oklch(0.75 0.14 ${hue} / 0.40)`} />
+          {/* Sky gradient band */}
+          <ellipse cx={cx} cy={cy - r*0.35} rx={r*0.88} ry={r*0.50}
+            fill={`oklch(0.65 0.18 ${hue} / 0.22)`} />
+          {/* Mountain range — back layer */}
+          <path d={`
+            M ${cx - r*0.88} ${cy + r*0.20}
+            L ${cx - r*0.65} ${cy - r*0.45}
+            L ${cx - r*0.40} ${cy - r*0.10}
+            L ${cx - r*0.15} ${cy - r*0.60}
+            L ${cx + r*0.10} ${cy - r*0.30}
+            L ${cx + r*0.35} ${cy - r*0.55}
+            L ${cx + r*0.60} ${cy - r*0.15}
+            L ${cx + r*0.88} ${cy - r*0.40}
+            L ${cx + r*0.88} ${cy + r*0.20} Z`}
+            fill={`oklch(0.40 0.16 ${hue} / 0.50)`}
+          />
+          {/* Mountain range — front layer */}
+          <path d={`
+            M ${cx - r*0.88} ${cy + r*0.50}
+            L ${cx - r*0.55} ${cy + r*0.05}
+            L ${cx - r*0.30} ${cy + r*0.30}
+            L ${cx - r*0.05} ${cy - r*0.15}
+            L ${cx + r*0.20} ${cy + r*0.20}
+            L ${cx + r*0.45} ${cy - r*0.05}
+            L ${cx + r*0.70} ${cy + r*0.35}
+            L ${cx + r*0.88} ${cy + r*0.15}
+            L ${cx + r*0.88} ${cy + r*0.88}
+            L ${cx - r*0.88} ${cy + r*0.88} Z`}
+            fill={`oklch(0.50 0.20 ${hue} / 0.55)`}
+          />
+          {/* Snow caps */}
+          <polygon points={`${cx - r*0.65},${cy - r*0.45} ${cx - r*0.72},${cy - r*0.30} ${cx - r*0.58},${cy - r*0.30}`}
+            fill={`oklch(0.95 0.04 ${hue} / 0.70)`} />
+          <polygon points={`${cx - r*0.15},${cy - r*0.60} ${cx - r*0.24},${cy - r*0.42} ${cx - r*0.06},${cy - r*0.42}`}
+            fill={`oklch(0.95 0.04 ${hue} / 0.70)`} />
+          <polygon points={`${cx + r*0.35},${cy - r*0.55} ${cx + r*0.26},${cy - r*0.38} ${cx + r*0.44},${cy - r*0.38}`}
+            fill={`oklch(0.95 0.04 ${hue} / 0.70)`} />
+          {/* Columbia River gorge — canyon path */}
+          <path d={`M ${cx - r*0.88} ${cy + r*0.55} Q ${cx} ${cy + r*0.42} ${cx + r*0.88} ${cy + r*0.55}`}
+            fill="none" stroke={`oklch(0.72 0.20 200 / 0.55)`} strokeWidth="3.5" strokeLinecap="round" />
+          <path d={`M ${cx - r*0.88} ${cy + r*0.62} Q ${cx} ${cy + r*0.50} ${cx + r*0.88} ${cy + r*0.62}`}
+            fill="none" stroke={`oklch(0.68 0.18 200 / 0.40)`} strokeWidth="2" strokeLinecap="round" />
+          {/* Waterfall cascade */}
+          <line x1={cx + r*0.20} y1={cy - r*0.15} x2={cx + r*0.22} y2={cy + r*0.42}
+            stroke={`oklch(0.80 0.16 200 / 0.55)`} strokeWidth="2.5" strokeLinecap="round" />
+          <line x1={cx + r*0.24} y1={cy + r*0.05} x2={cx + r*0.26} y2={cy + r*0.42}
+            stroke={`oklch(0.78 0.14 200 / 0.35)`} strokeWidth="1.5" strokeLinecap="round" />
+          {/* Stars above mountains */}
+          {[[-0.50, -0.72], [0.0, -0.80], [0.55, -0.68], [-0.20, -0.78], [0.30, -0.75]].map(([dx, dy], i) => (
+            <circle key={i} cx={cx + dx! * r} cy={cy + dy! * r} r={1.5 + (i % 2)}
+              fill={`oklch(0.95 0.08 ${hue})`} opacity={0.70 + i * 0.05} />
+          ))}
         </svg>
       );
+
     default:
       return null;
   }
@@ -664,7 +1054,7 @@ function Planet({
             ? `0 0 32px 8px oklch(0.72 0.22 ${h} / 0.45), inset -${bodySize * 0.15}px -${bodySize * 0.15}px ${bodySize * 0.3}px oklch(0.06 0.02 300 / 0.5)`
             : `0 0 18px 4px oklch(0.72 0.22 ${h} / 0.18), inset -${bodySize * 0.15}px -${bodySize * 0.15}px ${bodySize * 0.3}px oklch(0.06 0.02 300 / 0.5)`,
           transform: isSelected ? "scale(1.06)" : hovered ? "scale(1.03)" : "scale(1)",
-          filter: festival.locked ? "saturate(0.5) brightness(0.55)" : "none",
+          filter: festival.locked ? "saturate(0.35) brightness(0.50) contrast(0.85)" : "none",
         }}
       >
         {/* Base surface */}
@@ -685,7 +1075,9 @@ function Planet({
         )}
 
         {/* Themed surface detail */}
-        <PlanetSurface detail={theme.detail} size={bodySize} hue={h} />
+        <div className="absolute inset-0" style={{ clipPath: "circle(50% at 50% 50%)" }}>
+          <PlanetSurface detail={theme.detail} size={bodySize} hue={h} />
+        </div>
 
         {/* Atmosphere highlight */}
         <div
@@ -706,9 +1098,19 @@ function Planet({
         {festival.locked && (
           <div
             className="absolute inset-0 flex flex-col items-center justify-center gap-1"
-            style={{ background: "oklch(0.06 0.02 300 / 0.55)" }}
+            style={{ background: "oklch(0.04 0.02 300 / 0.60)" }}
           >
-            <Lock className="w-5 h-5" style={{ color: "oklch(0.75 0.15 60 / 0.9)" }} />
+            <div
+              className="flex items-center justify-center rounded-full"
+              style={{
+                width: bodySize * 0.28,
+                height: bodySize * 0.28,
+                background: `oklch(0.72 0.22 ${h} / 0.15)`,
+                border: `1px solid oklch(0.72 0.22 ${h} / 0.35)`,
+              }}
+            >
+              <Lock className="w-4 h-4" style={{ color: `oklch(0.80 0.18 ${h} / 0.90)` }} />
+            </div>
           </div>
         )}
 
