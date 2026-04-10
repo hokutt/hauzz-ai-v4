@@ -446,6 +446,18 @@ export default function DesignStudio() {
             imageUrl: (c.rawLlmOutput as any)?.conceptImageUrl ?? null,
           }))
         );
+        // Restore persisted FASHN render URLs into the fashnRenders Map
+        const restoredRenders = new Map<number, { status: "pending" | "loading" | "done" | "error"; url?: string; flatLayUrl?: string }>();
+        for (const c of savedConcepts) {
+          const renderUrl = (c as any).fashnRenderUrl as string | null | undefined;
+          const flatLayUrl = (c as any).fashnFlatLayUrl as string | null | undefined;
+          if (renderUrl) {
+            restoredRenders.set(c.id, { status: "done", url: renderUrl, flatLayUrl: flatLayUrl ?? undefined });
+          }
+        }
+        if (restoredRenders.size > 0) {
+          setFashnRenders(restoredRenders);
+        }
         const selected = savedConcepts.find((c) => c.isSelected);
         if (selected) setSelectedConcept(selected.id);
       }

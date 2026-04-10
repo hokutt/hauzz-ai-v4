@@ -205,3 +205,11 @@
 - [x] Add Waitlist tab to Admin Dashboard — table of emails per festival, total count, joined date
 - [x] Add CSV export button on Waitlist tab — download all waitlist emails as CSV
 - [x] Add Pricing section to homepage — Free / $350+ Full Garment / $550+ Rush tier cards with feature lists and CTAs
+
+## Try On Persistence (Apr 10)
+- [x] Add fashn_render_url and fashn_flat_lay_url columns to concept_cards table (nullable text)
+- [x] Run SQL migration to add columns to Supabase
+- [x] Update fashnTryOn procedure to save render URLs to concept_cards row after successful render
+- [x] Update getConcepts query to return fashn_render_url and fashn_flat_lay_url (auto via Drizzle select *)
+- [x] Load persisted render URLs into fashnRenders Map on thread resume in DesignStudio
+- [ ] Show FASHN render thumbnail in My Designs thread list if available

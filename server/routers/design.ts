@@ -481,7 +481,20 @@ export const designRouter = router({
         if (!pollRes.ok) continue;
         const poll = await pollRes.json() as { status: string; output?: string[] };
         if (poll.status === "succeeded" && poll.output?.[0]) {
-          return { renderUrl: poll.output[0], flatLayUrl: garmentImageUrl, predictionId, status: "succeeded" as const };
+          const renderUrl = poll.output[0];
+          // Persist render URLs to the database so they survive page refreshes
+          try {
+            const db = await getDb();
+            if (db) {
+              await db.execute(
+                sql`UPDATE concept_cards SET fashn_render_url = ${renderUrl}, fashn_flat_lay_url = ${garmentImageUrl} WHERE id = ${input.conceptId}`
+              );
+            }
+          } catch (dbErr) {
+            // Non-fatal: return the render URL even if DB save fails
+            console.error("[fashnTryOn] Failed to persist render URL:", dbErr);
+          }
+          return { renderUrl, flatLayUrl: garmentImageUrl, predictionId, status: "succeeded" as const };
         }
         if (poll.status === "failed") {
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "FASHN render failed" });

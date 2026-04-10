@@ -128,6 +128,8 @@ export const conceptCards = pgTable("concept_cards", {
   isRejected: boolean("is_rejected").default(false).notNull(),
   generationRound: integer("generation_round").default(1).notNull(),
   rawLlmOutput: jsonb("raw_llm_output"),
+  fashnRenderUrl: text("fashn_render_url"),
+  fashnFlatLayUrl: text("fashn_flat_lay_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
