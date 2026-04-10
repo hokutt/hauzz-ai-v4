@@ -1431,22 +1431,26 @@ interface OrbitConfig {
 }
 
 const ORBIT_CONFIGS: OrbitConfig[] = [
-  // Inner ring — EDC LV (featured, closest to sun)
-  { festivalId: "edc-lv-2027",        rx: 120, ryRatio: 0.45, period: 22,  startAngle: 30,  size: 88 },
-  // Second ring
-  { festivalId: "lost-in-dreams-2026", rx: 185, ryRatio: 0.44, period: 32,  startAngle: 0,   size: 70 },
-  { festivalId: "hard-summer-2026",    rx: 185, ryRatio: 0.44, period: 32,  startAngle: 180, size: 66 },
-  // Third ring
-  { festivalId: "wasteland-2026",      rx: 255, ryRatio: 0.42, period: 44,  startAngle: 60,  size: 62 },
-  { festivalId: "nocturnal-2026",      rx: 255, ryRatio: 0.42, period: 44,  startAngle: 240, size: 62 },
-  // Fourth ring
-  { festivalId: "edc-korea-2026",      rx: 325, ryRatio: 0.40, period: 56,  startAngle: 20,  size: 58 },
-  { festivalId: "edc-colombia-2026",   rx: 325, ryRatio: 0.40, period: 56,  startAngle: 200, size: 56 },
-  { festivalId: "iii-points-2026",     rx: 325, ryRatio: 0.40, period: 56,  startAngle: 110, size: 54 },
-  // Outer ring — locked festivals
-  { festivalId: "beyond-chicago-2026", rx: 395, ryRatio: 0.38, period: 72,  startAngle: 45,  size: 50 },
-  { festivalId: "electric-forest-2026",rx: 395, ryRatio: 0.38, period: 72,  startAngle: 165, size: 50 },
-  { festivalId: "beyond-gorge-2026",   rx: 395, ryRatio: 0.38, period: 72,  startAngle: 285, size: 50 },
+  // Orbit 1 — EDC LV alone, well clear of the sun (sun radius ~40px, planet ~44px)
+  { festivalId: "edc-lv-2027",        rx: 140, ryRatio: 0.46, period: 22,  startAngle: 45,  size: 88 },
+  
+  // Orbit 2 — two planets, 180° apart
+  { festivalId: "lost-in-dreams-2026", rx: 220, ryRatio: 0.44, period: 34,  startAngle: 30,  size: 70 },
+  { festivalId: "hard-summer-2026",    rx: 220, ryRatio: 0.44, period: 34,  startAngle: 210, size: 66 },
+  
+  // Orbit 3 — two planets, 180° apart, offset from orbit 2
+  { festivalId: "wasteland-2026",      rx: 300, ryRatio: 0.42, period: 48,  startAngle: 120, size: 62 },
+  { festivalId: "nocturnal-2026",      rx: 300, ryRatio: 0.42, period: 48,  startAngle: 300, size: 62 },
+  
+  // Orbit 4 — three planets, 120° apart
+  { festivalId: "edc-korea-2026",      rx: 385, ryRatio: 0.40, period: 62,  startAngle: 0,   size: 58 },
+  { festivalId: "edc-colombia-2026",   rx: 385, ryRatio: 0.40, period: 62,  startAngle: 120, size: 56 },
+  { festivalId: "iii-points-2026",     rx: 385, ryRatio: 0.40, period: 62,  startAngle: 240, size: 54 },
+  
+  // Orbit 5 — three planets, 120° apart, offset from orbit 4
+  { festivalId: "beyond-chicago-2026", rx: 470, ryRatio: 0.38, period: 80,  startAngle: 60,  size: 50 },
+  { festivalId: "electric-forest-2026",rx: 470, ryRatio: 0.38, period: 80,  startAngle: 180, size: 50 },
+  { festivalId: "beyond-gorge-2026",   rx: 470, ryRatio: 0.38, period: 80,  startAngle: 300, size: 50 },
 ];
 
 // ── Solar system: JS-driven orbital positions ────────────────────────────────────
@@ -1495,7 +1499,8 @@ function SolarSystem({
 
   const maxRx = Math.max(...orbitConfigs.map((o) => o.rx));
   const maxRy = Math.max(...orbitConfigs.map((o) => o.rx * o.ryRatio));
-  const padding = 80;
+  // Extra padding to prevent tilt clipping: tilt adds ~26% extra extent (sin(15°) ≈ 0.259)
+  const padding = 120;
   const W = (maxRx + padding) * 2;
   const H = (maxRy + padding) * 2;
 
@@ -1504,8 +1509,10 @@ function SolarSystem({
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const update = () => {
-      const available = Math.min(window.innerWidth - 32, W);
-      setScale(available / W);
+      // Reserve 280px on the right for the quick-select panel, 32px left margin
+      const panelWidth = window.innerWidth > 900 ? 280 : 0;
+      const available = Math.min(window.innerWidth - 32 - panelWidth, W);
+      setScale(Math.min(1, available / W));
     };
     update();
     window.addEventListener("resize", update);
@@ -1516,9 +1523,10 @@ function SolarSystem({
   const cy = H / 2;
 
   return (
-    <div ref={containerRef} className="relative" style={{ width: W * scale, height: H * scale }}>      
-      {/* Inner canvas scaled to fit viewport */}
-      <div style={{ width: W, height: H, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+    // overflow-visible so tilted planets don't get clipped by the container boundary
+    <div ref={containerRef} className="relative" style={{ width: W * scale, height: H * scale, overflow: "visible" }}>      
+      {/* Inner canvas scaled to fit viewport, tilted -15° for a dramatic solar system perspective */}
+      <div style={{ width: W, height: H, transform: `scale(${scale}) rotate(-15deg)`, transformOrigin: "center center" }}>
       {/* Orbit ring SVG */}
       <svg className="absolute inset-0 pointer-events-none" style={{ width: "100%", height: "100%" }}>
         {orbitConfigs.map((cfg) => {
@@ -1693,13 +1701,13 @@ function PlanetDot({
         )}
       </div>
 
-      {/* Label — show on hover or selected */}
+      {/* Label — show on hover or selected; counter-rotated so text stays upright when canvas is tilted */}
       <div
         className="absolute text-center pointer-events-none"
         style={{
           bottom: -34,
           left: "50%",
-          transform: "translateX(-50%)",
+          transform: "translateX(-50%) rotate(15deg)",
           width: size + 70,
           opacity: isActive ? 1 : 0,
           transition: "opacity 0.3s ease",

@@ -213,3 +213,11 @@
 - [x] Update getConcepts query to return fashn_render_url and fashn_flat_lay_url (auto via Drizzle select *)
 - [x] Load persisted render URLs into fashnRenders Map on thread resume in DesignStudio
 - [x] Show FASHN render thumbnail in My Designs thread list if available (replaces mood board as card background + FASHN badge shown)
+
+## Solar System Polish (Apr 10)
+- [x] Tilt entire solar system at -15° angle (CSS rotate on inner canvas wrapper)
+- [x] Spread orbit radii so no planet collides with sun (orbit 1: 140px, 2: 220px, 3: 300px, 4: 385px, 5: 470px)
+- [x] Stagger starting angles so planets are evenly distributed (120° apart on 3-planet orbits, 180° on 2-planet orbits)
+- [x] Increase canvas padding to 120px + overflow-visible to prevent tilt clipping
+- [x] Counter-rotate planet labels +15° so text stays upright
+- [x] Scale calculation reserves 280px for quick-select panel on desktop
