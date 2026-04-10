@@ -1415,18 +1415,325 @@ function EmptyHint() {
   );
 }
 
+// ── Solar orbit config ────────────────────────────────────────────────────────
+interface OrbitConfig {
+  festivalId: string;
+  /** Semi-major axis in px (horizontal radius of ellipse) */
+  rx: number;
+  /** Ratio of semi-minor to semi-major (0-1). 0.35 = fairly flat ellipse */
+  ryRatio: number;
+  /** Orbit period in seconds */
+  period: number;
+  /** Starting angle in degrees (0 = right, 90 = bottom) */
+  startAngle: number;
+  /** Planet display size */
+  size: number;
+}
+
+const ORBIT_CONFIGS: OrbitConfig[] = [
+  // Inner ring — EDC LV (featured, closest to sun)
+  { festivalId: "edc-lv-2027",        rx: 120, ryRatio: 0.45, period: 22,  startAngle: 30,  size: 88 },
+  // Second ring
+  { festivalId: "lost-in-dreams-2026", rx: 185, ryRatio: 0.44, period: 32,  startAngle: 0,   size: 70 },
+  { festivalId: "hard-summer-2026",    rx: 185, ryRatio: 0.44, period: 32,  startAngle: 180, size: 66 },
+  // Third ring
+  { festivalId: "wasteland-2026",      rx: 255, ryRatio: 0.42, period: 44,  startAngle: 60,  size: 62 },
+  { festivalId: "nocturnal-2026",      rx: 255, ryRatio: 0.42, period: 44,  startAngle: 240, size: 62 },
+  // Fourth ring
+  { festivalId: "edc-korea-2026",      rx: 325, ryRatio: 0.40, period: 56,  startAngle: 20,  size: 58 },
+  { festivalId: "edc-colombia-2026",   rx: 325, ryRatio: 0.40, period: 56,  startAngle: 200, size: 56 },
+  { festivalId: "iii-points-2026",     rx: 325, ryRatio: 0.40, period: 56,  startAngle: 110, size: 54 },
+  // Outer ring — locked festivals
+  { festivalId: "beyond-chicago-2026", rx: 395, ryRatio: 0.38, period: 72,  startAngle: 45,  size: 50 },
+  { festivalId: "electric-forest-2026",rx: 395, ryRatio: 0.38, period: 72,  startAngle: 165, size: 50 },
+  { festivalId: "beyond-gorge-2026",   rx: 395, ryRatio: 0.38, period: 72,  startAngle: 285, size: 50 },
+];
+
+// ── Solar system: JS-driven orbital positions ────────────────────────────────────
+function SolarSystem({
+  festivals,
+  orbitConfigs,
+  selectedId,
+  onPlanetClick,
+  isPaused,
+}: {
+  festivals: Festival[];
+  orbitConfigs: OrbitConfig[];
+  selectedId: string | null;
+  onPlanetClick: (id: string) => void;
+  isPaused: boolean;
+}) {
+  // angles[i] = current angle in radians for each orbit
+  const anglesRef = useRef<number[]>(
+    orbitConfigs.map((cfg) => (cfg.startAngle * Math.PI) / 180)
+  );
+  const [angles, setAngles] = useState<number[]>(
+    orbitConfigs.map((cfg) => (cfg.startAngle * Math.PI) / 180)
+  );
+  const pausedRef = useRef(isPaused);
+  useEffect(() => { pausedRef.current = isPaused; }, [isPaused]);
+
+  const rafRef = useRef<number>(0);
+  const lastTimeRef = useRef<number>(0);
+
+  useEffect(() => {
+    const tick = (time: number) => {
+      const dt = lastTimeRef.current ? (time - lastTimeRef.current) / 1000 : 0;
+      lastTimeRef.current = time;
+      if (!pausedRef.current && dt > 0) {
+        anglesRef.current = anglesRef.current.map((a, i) => {
+          const speed = (2 * Math.PI) / orbitConfigs[i].period;
+          return a + speed * dt;
+        });
+        setAngles([...anglesRef.current]);
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [orbitConfigs]);
+
+  const maxRx = Math.max(...orbitConfigs.map((o) => o.rx));
+  const maxRy = Math.max(...orbitConfigs.map((o) => o.rx * o.ryRatio));
+  const padding = 80;
+  const W = (maxRx + padding) * 2;
+  const H = (maxRy + padding) * 2;
+
+  // Responsive: scale down on small screens
+  const [scale, setScale] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const update = () => {
+      const available = Math.min(window.innerWidth - 32, W);
+      setScale(available / W);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [W]);
+
+  const cx = W / 2;
+  const cy = H / 2;
+
+  return (
+    <div ref={containerRef} className="relative" style={{ width: W * scale, height: H * scale }}>      
+      {/* Inner canvas scaled to fit viewport */}
+      <div style={{ width: W, height: H, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+      {/* Orbit ring SVG */}
+      <svg className="absolute inset-0 pointer-events-none" style={{ width: "100%", height: "100%" }}>
+        {orbitConfigs.map((cfg) => {
+          const festival = festivals.find((f) => f.id === cfg.festivalId);
+          const isLocked = festival?.locked ?? false;
+          return (
+            <ellipse
+              key={cfg.festivalId}
+              cx={cx}
+              cy={cy}
+              rx={cfg.rx}
+              ry={cfg.rx * cfg.ryRatio}
+              fill="none"
+              stroke={isLocked ? "oklch(0.35 0.04 300 / 0.22)" : "oklch(0.72 0.22 340 / 0.12)"}
+              strokeWidth={isLocked ? "0.8" : "1"}
+              strokeDasharray={isLocked ? "4 6" : undefined}
+            />
+          );
+        })}
+      </svg>
+
+      {/* Sun */}
+      <div
+        className="absolute animate-sun-pulse"
+        style={{
+          width: 80, height: 80,
+          top: cy, left: cx,
+          transform: "translate(-50%, -50%)",
+          borderRadius: "50%",
+          background: "radial-gradient(circle at 40% 35%, oklch(1.0 0.30 80) 0%, oklch(0.92 0.28 60) 30%, oklch(0.80 0.26 40) 60%, oklch(0.55 0.20 30) 100%)",
+          zIndex: 20,
+        }}
+      >
+        <div
+          className="absolute inset-0 rounded-full pointer-events-none"
+          style={{
+            background: "conic-gradient(from 0deg, oklch(0.85 0.24 60 / 0.0) 0deg, oklch(0.85 0.24 60 / 0.20) 15deg, oklch(0.85 0.24 60 / 0.0) 30deg, oklch(0.85 0.24 60 / 0.15) 45deg, oklch(0.85 0.24 60 / 0.0) 60deg, oklch(0.85 0.24 60 / 0.22) 75deg, oklch(0.85 0.24 60 / 0.0) 90deg, oklch(0.85 0.24 60 / 0.12) 105deg, oklch(0.85 0.24 60 / 0.0) 120deg, oklch(0.85 0.24 60 / 0.18) 135deg, oklch(0.85 0.24 60 / 0.0) 150deg, oklch(0.85 0.24 60 / 0.10) 165deg, oklch(0.85 0.24 60 / 0.0) 180deg, oklch(0.85 0.24 60 / 0.16) 195deg, oklch(0.85 0.24 60 / 0.0) 210deg, oklch(0.85 0.24 60 / 0.14) 225deg, oklch(0.85 0.24 60 / 0.0) 240deg, oklch(0.85 0.24 60 / 0.20) 255deg, oklch(0.85 0.24 60 / 0.0) 270deg, oklch(0.85 0.24 60 / 0.16) 285deg, oklch(0.85 0.24 60 / 0.0) 300deg, oklch(0.85 0.24 60 / 0.22) 315deg, oklch(0.85 0.24 60 / 0.0) 330deg, oklch(0.85 0.24 60 / 0.18) 345deg, oklch(0.85 0.24 60 / 0.0) 360deg)",
+            transform: "scale(2.4)",
+            filter: "blur(8px)",
+          }}
+        />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="font-display font-black text-xs" style={{ color: "oklch(0.15 0.05 40)", letterSpacing: "0.05em" }}>HAUZZ</span>
+        </div>
+      </div>
+
+      {/* Planets */}
+      {orbitConfigs.map((cfg, i) => {
+        const festival = festivals.find((f) => f.id === cfg.festivalId);
+        if (!festival) return null;
+        const angle = angles[i] ?? 0;
+        const px = cx + cfg.rx * Math.cos(angle);
+        const py = cy + cfg.rx * cfg.ryRatio * Math.sin(angle);
+        const isSelected = selectedId === cfg.festivalId;
+        return (
+          <PlanetDot
+            key={cfg.festivalId}
+            festival={festival}
+            size={cfg.size}
+            x={px}
+            y={py}
+            isSelected={isSelected}
+            onClick={() => onPlanetClick(cfg.festivalId)}
+          />
+        );
+      })}
+      </div>  {/* end inner scaled canvas */}
+    </div>
+  );
+}
+
+function PlanetDot({
+  festival,
+  size,
+  x,
+  y,
+  isSelected,
+  onClick,
+}: {
+  festival: Festival;
+  size: number;
+  x: number;
+  y: number;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const { theme } = festival;
+  const h = festival.color;
+  const isActive = isSelected || hovered;
+
+  return (
+    <div
+      className="absolute cursor-pointer select-none"
+      style={{
+        left: x,
+        top: y,
+        transform: "translate(-50%, -50%)",
+        width: size,
+        height: size,
+        zIndex: isSelected ? 30 : isActive ? 25 : 10,
+      }}
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Ambient glow */}
+      <div
+        className="absolute rounded-full pointer-events-none"
+        style={{
+          inset: -size * 0.4,
+          background: isActive
+            ? `radial-gradient(circle, ${theme.accent} 0%, transparent 60%)`
+            : `radial-gradient(circle, oklch(0.72 0.22 ${h} / 0.10) 0%, transparent 60%)`,
+          filter: "blur(10px)",
+          opacity: isActive ? 0.70 : 0.25,
+          transition: "opacity 0.4s ease",
+        }}
+      />
+
+      {/* Planet ring */}
+      {theme.ring && (
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            width: size + 18,
+            height: (size + 18) * 0.22,
+            top: size * 0.39,
+            left: -9,
+            borderRadius: "50%",
+            border: `1.5px solid ${theme.ring}`,
+            opacity: isActive ? Math.min((theme.ringOpacity ?? 0.5) * 1.5, 1) : (theme.ringOpacity ?? 0.5),
+            transform: "rotateX(70deg)",
+            transition: "opacity 0.4s ease",
+          }}
+        />
+      )}
+
+      {/* Planet body */}
+      <div
+        className="relative rounded-full overflow-hidden"
+        style={{
+          width: size,
+          height: size,
+          boxShadow: isSelected
+            ? `0 0 36px 10px oklch(0.72 0.22 ${h} / 0.70), inset -${size*0.15}px -${size*0.15}px ${size*0.3}px oklch(0.06 0.02 300 / 0.6)`
+            : hovered
+            ? `0 0 20px 5px oklch(0.72 0.22 ${h} / 0.45), inset -${size*0.15}px -${size*0.15}px ${size*0.3}px oklch(0.06 0.02 300 / 0.5)`
+            : `0 0 10px 2px oklch(0.72 0.22 ${h} / 0.18), inset -${size*0.15}px -${size*0.15}px ${size*0.3}px oklch(0.06 0.02 300 / 0.5)`,
+          transform: isSelected ? "scale(1.18)" : hovered ? "scale(1.10)" : "scale(1)",
+          filter: festival.locked ? "saturate(0.45) brightness(0.55)" : "none",
+          transition: "transform 0.3s ease, box-shadow 0.3s ease",
+        }}
+      >
+        {festival.image && !festival.locked ? (
+          <img src={festival.image} alt={festival.name} className="w-full h-full object-cover" style={{ opacity: 0.80 }} />
+        ) : (
+          <div className="w-full h-full" style={{ background: `radial-gradient(ellipse at 32% 32%, ${theme.surface[0]} 0%, ${theme.surface[1]} 50%, ${theme.surface[2]} 100%)` }} />
+        )}
+        <div className="absolute inset-0" style={{ clipPath: "circle(50% at 50% 50%)" }}>
+          <PlanetSurface detail={theme.detail} size={size} hue={h} />
+        </div>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at 28% 28%, oklch(0.90 0.15 ${h} / 0.28) 0%, transparent 55%)` }} />
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 72% 68%, oklch(0.04 0.02 300 / 0.70) 0%, transparent 52%)" }} />
+        {festival.locked && (
+          <div className="absolute inset-0 flex items-center justify-center" style={{ background: "oklch(0.04 0.02 300 / 0.55)" }}>
+            <Lock className="w-3 h-3" style={{ color: `oklch(0.80 0.18 ${h} / 0.85)` }} />
+          </div>
+        )}
+        {isSelected && (
+          <div className="absolute inset-0 rounded-full pointer-events-none animate-pulse-glow" style={{ border: `2px solid oklch(0.85 0.18 ${h} / 0.6)` }} />
+        )}
+      </div>
+
+      {/* Label — show on hover or selected */}
+      <div
+        className="absolute text-center pointer-events-none"
+        style={{
+          bottom: -34,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: size + 70,
+          opacity: isActive ? 1 : 0,
+          transition: "opacity 0.3s ease",
+        }}
+      >
+        <div className="flex items-center justify-center gap-1">
+          <span className="text-sm leading-none">{theme.icon}</span>
+          <span className="font-display font-bold text-xs whitespace-nowrap" style={{ color: theme.accent }}>
+            {festival.name.replace(/\s*\d{4}$/, "").trim()}
+          </span>
+        </div>
+        <div className="text-xs text-muted-foreground truncate">
+          {festival.locked ? "Waitlist" : festival.dates.split("·")[0].trim()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function FestivalMap() {
   const [, navigate] = useLocation();
-  const [selectedId, setSelectedId] = useState<string | null>("edc-lv-2027");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
   const { user, isAuthenticated } = useAuth();
 
   const selected = FESTIVALS.find((f) => f.id === selectedId) ?? null;
-  const openFestivals = FESTIVALS.filter((f) => !f.locked);
-  const lockedFestivals = FESTIVALS.filter((f) => f.locked);
 
   const handlePlanetClick = useCallback((id: string) => {
-    setSelectedId((prev) => (prev === id ? null : id));
+    setSelectedId((prev) => {
+      const next = prev === id ? null : id;
+      setIsPaused(next !== null); // pause orbits when a planet is selected
+      return next;
+    });
   }, []);
 
   const handleDesign = () => {
@@ -1437,31 +1744,16 @@ export default function FestivalMap() {
     <div className="relative min-h-screen overflow-hidden bg-background">
       {/* ── Background ── */}
       <div className="fixed inset-0 z-0">
-        <img
-          src={GALAXY_BG}
-          alt="Space"
-          className="w-full h-full object-cover"
-          style={{ opacity: 0.3, filter: "saturate(1.2)" }}
-        />
+        <img src={GALAXY_BG} alt="Space" className="w-full h-full object-cover" style={{ opacity: 0.3, filter: "saturate(1.2)" }} />
         <div className="absolute inset-0" style={{ background: "oklch(0.06 0.02 300 / 0.72)" }} />
-        {/* Nebula blobs */}
-        <div
-          className="absolute -top-1/4 -left-1/4 w-[70vw] h-[70vw] rounded-full animate-nebula-drift pointer-events-none"
-          style={{ background: "radial-gradient(ellipse, oklch(0.55 0.18 340 / 0.12) 0%, transparent 70%)", filter: "blur(80px)" }}
-        />
-        <div
-          className="absolute -bottom-1/4 -right-1/4 w-[60vw] h-[60vw] rounded-full animate-nebula-drift pointer-events-none"
-          style={{ background: "radial-gradient(ellipse, oklch(0.55 0.18 260 / 0.10) 0%, transparent 70%)", filter: "blur(100px)", animationDelay: "8s" }}
-        />
+        <div className="absolute -top-1/4 -left-1/4 w-[70vw] h-[70vw] rounded-full animate-nebula-drift pointer-events-none" style={{ background: "radial-gradient(ellipse, oklch(0.55 0.18 340 / 0.12) 0%, transparent 70%)", filter: "blur(80px)" }} />
+        <div className="absolute -bottom-1/4 -right-1/4 w-[60vw] h-[60vw] rounded-full animate-nebula-drift pointer-events-none" style={{ background: "radial-gradient(ellipse, oklch(0.55 0.18 260 / 0.10) 0%, transparent 70%)", filter: "blur(100px)", animationDelay: "8s" }} />
         <SpaceCanvas />
       </div>
 
       {/* ── Nav ── */}
       <nav className="relative z-50 flex items-center justify-between px-6 py-4 border-b border-border/50 backdrop-blur-xl" style={{ background: "oklch(0.06 0.02 300 / 0.75)" }}>
-        <button
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-          onClick={() => navigate("/")}
-        >
+        <button className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors" onClick={() => navigate("/")}>
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm font-medium">Back</span>
         </button>
@@ -1473,138 +1765,62 @@ export default function FestivalMap() {
           {isAuthenticated ? (
             <span className="text-xs text-muted-foreground">{user?.name}</span>
           ) : (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="font-semibold text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => (window.location.href = getLoginUrl())}
-            >
-              Sign In
-            </Button>
+            <Button size="sm" variant="ghost" className="font-semibold text-xs text-muted-foreground hover:text-foreground" onClick={() => (window.location.href = getLoginUrl())}>Sign In</Button>
           )}
-          <Button
-            size="sm"
-            className="font-semibold text-xs"
-            style={{
-              background: "oklch(0.72 0.22 340 / 0.15)",
-              color: "oklch(0.85 0.18 340)",
-              border: "1px solid oklch(0.72 0.22 340 / 0.3)",
-            }}
-            onClick={() => navigate("/design-studio")}
-          >
-            Design Studio
-          </Button>
+          <Button size="sm" className="font-semibold text-xs" style={{ background: "oklch(0.72 0.22 340 / 0.15)", color: "oklch(0.85 0.18 340)", border: "1px solid oklch(0.72 0.22 340 / 0.3)" }} onClick={() => navigate("/design-studio")}>Design Studio</Button>
         </div>
       </nav>
 
       {/* ── Page header ── */}
-      <div className="relative z-10 text-center pt-14 pb-6 px-4">
-        <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground mb-3 animate-fade-up" style={{ animationDelay: "0.05s" }}>
-          Select Your Universe
-        </p>
-        <h1
-          className="font-display font-black text-5xl sm:text-7xl text-foreground animate-fade-up"
-          style={{ animationDelay: "0.15s" }}
-        >
-          Festival <span className="text-gradient-pink">Map</span>
+      <div className="relative z-10 text-center pt-10 pb-4 px-4">
+        <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground mb-2 animate-fade-up" style={{ animationDelay: "0.05s" }}>Select Your Universe</p>
+        <h1 className="font-display font-black text-4xl sm:text-6xl text-foreground animate-fade-up" style={{ animationDelay: "0.15s" }}>
+          Festival <span className="text-gradient-pink">Solar System</span>
         </h1>
-        <p
-          className="text-muted-foreground text-sm mt-3 max-w-sm mx-auto animate-fade-up"
-          style={{ animationDelay: "0.25s" }}
-        >
-          Each festival is a world. Click your planet to begin designing for it.
+        <p className="text-muted-foreground text-sm mt-2 max-w-sm mx-auto animate-fade-up" style={{ animationDelay: "0.25s" }}>
+          Each festival is a world orbiting the HAUZZ sun. Click a planet to begin.
         </p>
       </div>
 
-      {/* ── Main layout: planets + panel ── */}
-      <div className="relative z-10 px-4 sm:px-8 pb-8">
-        <div className="max-w-7xl mx-auto flex flex-col xl:flex-row gap-10 items-start justify-center">
+      {/* ── Solar system + panel layout ── */}
+      <div className="relative z-10 flex flex-col xl:flex-row items-center xl:items-start justify-center gap-6 px-4 pb-12">
 
-          {/* ── Planet solar system ── */}
-          <div className="flex-1 min-w-0">
+        {/* ── Solar system ── */}
+        <SolarSystem
+          festivals={FESTIVALS}
+          orbitConfigs={ORBIT_CONFIGS}
+          selectedId={selectedId}
+          onPlanetClick={handlePlanetClick}
+          isPaused={isPaused}
+        />
 
-            {/* Open universes */}
-            <div className="mb-2">
-              <div className="flex items-center gap-3 mb-10 justify-center">
-                <div className="h-px flex-1 max-w-[80px]" style={{ background: "oklch(0.72 0.22 340 / 0.25)" }} />
-                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Open Universes</p>
-                <div className="h-px flex-1 max-w-[80px]" style={{ background: "oklch(0.72 0.22 340 / 0.25)" }} />
-              </div>
-
-              {/* Featured row: EDC LV (large, centered) */}
-              <div className="flex justify-center mb-4">
-                {openFestivals.filter((f) => f.id === "edc-lv-2027").map((f) => (
-                  <Planet
+        {/* ── Side panel ── */}
+        <div className="xl:sticky xl:top-24 w-full xl:w-auto flex-shrink-0 flex justify-center xl:justify-start xl:pt-16">
+          {selected && !selected.locked && (
+            <VenuePanel festival={selected} onDesign={handleDesign} />
+          )}
+          {selected && selected.locked && (
+            <WaitlistPanel festival={selected} />
+          )}
+          {!selected && (
+            <div className="glass rounded-2xl px-6 py-5 max-w-xs animate-fade-in">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                <span className="text-foreground font-semibold">Click a planet</span> to explore its universe and start designing your festival look.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {FESTIVALS.filter(f => !f.locked).slice(0, 4).map(f => (
+                  <button
                     key={f.id}
-                    festival={f}
-                    isSelected={selectedId === f.id}
+                    className="px-3 py-1 rounded-full text-xs font-medium glass transition-all hover:opacity-80"
+                    style={{ color: f.theme.accent }}
                     onClick={() => handlePlanetClick(f.id)}
-                    size={210}
-                  />
-                ))}
-              </div>
-
-              {/* Secondary row: next 3 */}
-              <div className="flex flex-wrap justify-center gap-x-10 gap-y-4">
-                {openFestivals.filter((f) => f.id !== "edc-lv-2027").slice(0, 3).map((f) => (
-                  <Planet
-                    key={f.id}
-                    festival={f}
-                    isSelected={selectedId === f.id}
-                    onClick={() => handlePlanetClick(f.id)}
-                    size={155}
-                  />
-                ))}
-              </div>
-
-              {/* Tertiary row: remaining open */}
-              <div className="flex flex-wrap justify-center gap-x-10 gap-y-4 mt-4">
-                {openFestivals.filter((f) => f.id !== "edc-lv-2027").slice(3).map((f) => (
-                  <Planet
-                    key={f.id}
-                    festival={f}
-                    isSelected={selectedId === f.id}
-                    onClick={() => handlePlanetClick(f.id)}
-                    size={148}
-                  />
+                  >
+                    {f.theme.icon} {f.name.replace(/\s*\d{4}$/, "").trim()}
+                  </button>
                 ))}
               </div>
             </div>
-
-            {/* Divider */}
-            <div className="flex items-center gap-4 my-12 px-4">
-              <div className="h-px flex-1" style={{ background: "oklch(0.72 0.22 340 / 0.12)" }} />
-              <div className="flex items-center gap-2 px-4 py-1.5 rounded-full glass">
-                <Lock className="w-3 h-3" style={{ color: "oklch(0.75 0.15 60)" }} />
-                <span className="text-xs text-muted-foreground uppercase tracking-widest">Coming Soon — Join the Waitlist</span>
-              </div>
-              <div className="h-px flex-1" style={{ background: "oklch(0.72 0.22 340 / 0.12)" }} />
-            </div>
-
-            {/* Locked universes */}
-            <div className="flex flex-wrap justify-center gap-x-10 gap-y-4">
-              {lockedFestivals.map((f) => (
-                <Planet
-                  key={f.id}
-                  festival={f}
-                  isSelected={selectedId === f.id}
-                  onClick={() => handlePlanetClick(f.id)}
-                  size={138}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* ── Side panel ── */}
-          <div className="xl:sticky xl:top-24 w-full xl:w-auto flex-shrink-0 flex justify-center xl:justify-start pt-4">
-            {selected && !selected.locked && (
-              <VenuePanel festival={selected} onDesign={handleDesign} />
-            )}
-            {selected && selected.locked && (
-              <WaitlistPanel festival={selected} />
-            )}
-            {!selected && <EmptyHint />}
-          </div>
+          )}
         </div>
       </div>
 

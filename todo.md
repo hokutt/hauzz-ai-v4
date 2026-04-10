@@ -180,3 +180,10 @@
 - [x] Fix homepage hero badge — change "EDC Las Vegas 2025" → "EDC Las Vegas 2027"
 - [x] Build "How It Works" section on homepage — 3-step explainer wired to "See How It Works" button
 - [x] Add "My Designs" link to main homepage nav
+
+## Festival Map Solar System Redesign
+- [x] Rebuild FestivalMap as true solar system: glowing HAUZZ sun at center, festival planets in real elliptical orbits with animated rotation, click to select/expand planet, locked planets visually distinct, waitlist modal preserved, mobile-friendly
+
+## Solar System Polish
+- [x] Mobile-responsive solar system — scale canvas to viewport width on mobile, stack side panel below on small screens, touch-friendly planet tap targets
+- [x] Verify waitlist panel works correctly when locked planet is selected (WaitlistPanel renders in side panel)
