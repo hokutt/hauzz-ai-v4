@@ -33,9 +33,11 @@ function ThreadCard({
   const selectedConcept = thread.selectedConcept;
   const firstConcept = thread.concepts?.[0];
   const previewConcept = selectedConcept ?? firstConcept;
-  const imageUrl =
-    (previewConcept?.rawLlmOutput as any)?.conceptImageUrl ??
-    FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
+  // Prefer FASHN render (photorealistic) over mood board image if available
+  const fashnRenderUrl = (previewConcept as any)?.fashnRenderUrl as string | null | undefined;
+  const moodBoardUrl = (previewConcept?.rawLlmOutput as any)?.conceptImageUrl as string | null | undefined;
+  const imageUrl = fashnRenderUrl ?? moodBoardUrl ?? FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
+  const hasFashnRender = !!fashnRenderUrl;
   const status = STATUS_LABELS[thread.status] ?? { label: thread.status, color: "oklch(0.6 0.05 300)" };
   const conceptCount = thread.concepts?.length ?? 0;
   const messageCount = thread.messageCount ?? 0;
@@ -70,15 +72,25 @@ function ThreadCard({
         </span>
       </div>
 
-      {/* Selected indicator */}
-      {selectedConcept && (
-        <div
-          className="absolute top-4 right-4 w-7 h-7 rounded-full flex items-center justify-center"
-          style={{ background: "oklch(0.72 0.22 340)" }}
-        >
-          <Check className="w-3.5 h-3.5" style={{ color: "oklch(0.06 0.02 300)" }} />
-        </div>
-      )}
+      {/* Selected indicator + FASHN badge */}
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        {hasFashnRender && (
+          <span
+            className="px-2 py-0.5 rounded-full text-xs font-bold glass"
+            style={{ color: "oklch(0.72 0.22 340)" }}
+          >
+            FASHN
+          </span>
+        )}
+        {selectedConcept && (
+          <div
+            className="w-7 h-7 rounded-full flex items-center justify-center"
+            style={{ background: "oklch(0.72 0.22 340)" }}
+          >
+            <Check className="w-3.5 h-3.5" style={{ color: "oklch(0.06 0.02 300)" }} />
+          </div>
+        )}
+      </div>
 
       {/* Content */}
       <div className="absolute bottom-0 left-0 right-0 p-5">

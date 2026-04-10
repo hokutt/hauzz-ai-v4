@@ -212,4 +212,4 @@
 - [x] Update fashnTryOn procedure to save render URLs to concept_cards row after successful render
 - [x] Update getConcepts query to return fashn_render_url and fashn_flat_lay_url (auto via Drizzle select *)
 - [x] Load persisted render URLs into fashnRenders Map on thread resume in DesignStudio
-- [ ] Show FASHN render thumbnail in My Designs thread list if available
+- [x] Show FASHN render thumbnail in My Designs thread list if available (replaces mood board as card background + FASHN badge shown)
