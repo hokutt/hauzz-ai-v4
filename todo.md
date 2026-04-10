@@ -224,3 +224,13 @@
 
 ## Planet Labels Always Visible (Apr 10)
 - [x] Show abbreviated planet name labels at all times (not just hover/select) — star map style with explicit short names per festival, date/waitlist status shown on hover only
+
+## Body Photo Try-On (Apr 10)
+- [x] Add body_photo_url column to users table in Drizzle schema
+- [x] Run SQL migration to add column to Supabase
+- [x] Add uploadBodyPhoto tRPC mutation — accepts base64 image, stores to S3, saves URL to user row
+- [x] Add getBodyPhoto tRPC query — returns current user's body_photo_url
+- [x] Add body photo upload UI to Design Studio — compact card above concept grid with drag-and-drop, shows current photo thumbnail or upload prompt
+- [x] Update fashnTryOn procedure — uses user's body_photo_url as model image (tryon mode) when available, falls back to product-to-model with stock model
+- [x] Improve flat-lay generation prompt — white background, overhead shot, garment laid flat, no model, photorealistic product photo style
+- [x] handleBodyPhotoUpload: reads file → base64 → uploads via tRPC → refetches bodyPhotoQuery

@@ -36,12 +36,14 @@ function ConceptCard({
   index,
   fashnRender,
   onTryOn,
+  hasBodyPhoto,
 }: {
   concept: ConceptCardData;
   isSelected: boolean;
   onSelect: () => void;
   onReject?: () => void;
   onTryOn?: () => void;
+  hasBodyPhoto?: boolean;
   index: number;
   fashnRender?: { status: "pending" | "loading" | "done" | "error"; url?: string; flatLayUrl?: string };
 }) {
@@ -197,10 +199,10 @@ function ConceptCard({
               className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
               style={{ background: "oklch(0.55 0.18 280 / 0.15)", color: "oklch(0.78 0.20 280)", border: "1px solid oklch(0.55 0.18 280 / 0.35)" }}
               onClick={onTryOn}
-              title="Generate a photorealistic model render using FASHN.ai"
+              title={hasBodyPhoto ? "Render this outfit on your photo using FASHN.ai" : "Upload your photo above to try this on yourself — or renders on a stock model"}
             >
               <Camera className="w-3 h-3" />
-              Try On
+              {hasBodyPhoto ? "Try On Me" : "Try On"}
             </button>
           )}
         </div>
@@ -390,6 +392,15 @@ export default function DesignStudio() {
   // FASHN render state: Map<conceptId, { status, url?, flatLayUrl? }>
   const [fashnRenders, setFashnRenders] = useState<Map<number, { status: "pending" | "loading" | "done" | "error"; url?: string; flatLayUrl?: string }>>(new Map());
 
+  // Body photo state for FASHN try-on
+  const [bodyPhotoUploading, setBodyPhotoUploading] = useState(false);
+  const bodyPhotoQuery = trpc.design.getBodyPhoto.useQuery(undefined, { enabled: isAuthenticated });
+  const bodyPhotoUrl = bodyPhotoQuery.data?.url ?? null;
+  const uploadBodyPhotoMutation = trpc.design.uploadBodyPhoto.useMutation({
+    onSuccess: () => { bodyPhotoQuery.refetch(); toast.success("Photo saved! Try On will now use your photo."); },
+    onError: (e) => toast.error(`Upload failed: ${e.message}`),
+  });
+
   const submitIntakeMutation = trpc.intake.submit.useMutation();
   const guestSubmitMutation = trpc.intake.guestSubmit.useMutation();
   const selectConceptMutation = trpc.design.selectConcept.useMutation();
@@ -501,6 +512,30 @@ export default function DesignStudio() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, fashnTryOnMutation]);
+
+  // handleBodyPhotoUpload: read file → base64 → upload to S3 via tRPC
+  const handleBodyPhotoUpload = useCallback(async (file: File) => {
+    if (!isAuthenticated) { toast.error("Sign in to save your photo"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("Photo must be under 10MB"); return; }
+    setBodyPhotoUploading(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Strip the data:image/...;base64, prefix
+          resolve(result.split(",")[1] ?? result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      await uploadBodyPhotoMutation.mutateAsync({ base64, mimeType: file.type || "image/jpeg" });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Upload failed");
+    } finally {
+      setBodyPhotoUploading(false);
+    }
+  }, [isAuthenticated, uploadBodyPhotoMutation]);
 
   useEffect(() => {
     return () => {
@@ -833,6 +868,40 @@ export default function DesignStudio() {
                 )}
               </div>
             ) : (              <div className="grid grid-cols-1 gap-4">
+                {/* Body photo upload card — shown when signed in, above concept cards */}
+                {isAuthenticated && (
+                  <div
+                    className="rounded-xl border border-dashed p-3 flex items-center gap-3 cursor-pointer transition-all hover:border-pink-400/60"
+                    style={{ borderColor: bodyPhotoUrl ? "oklch(0.72 0.22 340 / 0.5)" : "oklch(0.5 0.1 300 / 0.4)", background: "oklch(0.12 0.04 300 / 0.6)" }}
+                    onClick={() => document.getElementById("body-photo-input")?.click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleBodyPhotoUpload(f); }}
+                  >
+                    <input
+                      id="body-photo-input"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBodyPhotoUpload(f); e.target.value = ""; }}
+                    />
+                    {bodyPhotoUrl ? (
+                      <img src={bodyPhotoUrl} alt="Your photo" className="w-12 h-16 object-cover rounded-lg flex-shrink-0" style={{ objectPosition: "top" }} />
+                    ) : (
+                      <div className="w-12 h-16 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.2 0.06 300)" }}>
+                        <Camera className="w-5 h-5" style={{ color: "oklch(0.72 0.22 340)" }} />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold" style={{ color: "oklch(0.72 0.22 340)" }}>
+                        {bodyPhotoUrl ? "Your Try-On Photo" : "Upload Your Photo"}
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.08 300)" }}>
+                        {bodyPhotoUploading ? "Uploading..." : bodyPhotoUrl ? "Tap to change · Used for Try On renders" : "Full body photo · FASHN will render the outfit on you"}
+                      </p>
+                    </div>
+                    {bodyPhotoUploading && <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" style={{ color: "oklch(0.72 0.22 340)" }} />}
+                  </div>
+                )}
                 {concepts.map((concept, i) => (
                   <ConceptCard
                     key={concept.id}
@@ -843,6 +912,7 @@ export default function DesignStudio() {
                     onReject={() => handleRejectConcept(concept.id)}
                     fashnRender={fashnRenders.get(concept.id)}
                     onTryOn={isAuthenticated ? () => handleTryOn(concept) : undefined}
+                    hasBodyPhoto={!!bodyPhotoUrl}
                   />
                 ))}
               </div>

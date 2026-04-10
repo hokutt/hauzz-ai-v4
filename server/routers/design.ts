@@ -429,20 +429,36 @@ export const designRouter = router({
       materials: z.array(z.string()),
       storyDescription: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const apiKey = process.env.FASHN_API_KEY;
       if (!apiKey) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "FASHN_API_KEY not configured" });
 
       const { generateImage } = await import("../_core/imageGeneration.js");
 
+      // Fetch user's body photo URL (if uploaded)
+      let modelImageUrl: string | undefined;
+      try {
+        const db = await getDb();
+        if (db) {
+          const rows = await db.execute(
+            sql`SELECT body_photo_url FROM users WHERE id = ${ctx.user.id} LIMIT 1`
+          );
+          modelImageUrl = ((rows as any).rows?.[0] ?? (rows as any)[0])?.body_photo_url ?? undefined;
+        }
+      } catch { /* non-fatal */ }
+
       // Step 1: Generate a clean garment flat-lay (white background, isolated clothing)
+      // Detailed prompt for FASHN compatibility: single dominant garment, clean product shot
+      const primaryGarment = input.garments[0] ?? "festival outfit";
+      const colors = input.palette.slice(0, 3).join(", ");
+      const mats = input.materials.slice(0, 2).join(", ");
       const flatLayPrompt = [
-        `Professional product photography flat lay of festival rave outfit: ${input.garments.slice(0, 2).join(" and ")}.`,
-        `Colors: ${input.palette.slice(0, 3).join(", ")}.`,
-        input.materials.length > 0 ? `Materials: ${input.materials.slice(0, 2).join(", ")}.` : "",
-        `Pure white background, clean studio lighting, no model, no props, isolated garment only.`,
-        `High-end fashion product photography, sharp focus, commercial quality.`,
-        `Style: ${input.storyDescription?.slice(0, 80) ?? "rave festival fashion"}.`,
+        `Product photography flat lay of a single ${primaryGarment}.`,
+        `Made from ${mats || "holographic spandex"}.`,
+        `Color: ${colors || "electric pink and purple"}.`,
+        `Pure white background, overhead shot, garment laid flat, no wrinkles, no model, no props, no shadows.`,
+        `Ultra-sharp focus, commercial fashion product photography, 8K resolution.`,
+        `Festival rave aesthetic: ${input.storyDescription?.slice(0, 60) ?? input.storyName}.`,
       ].filter(Boolean).join(" ");
 
       const flatLayResult = await generateImage({ prompt: flatLayPrompt });
@@ -450,21 +466,27 @@ export const designRouter = router({
 
       const garmentImageUrl = flatLayResult.url;
 
-      // Step 2: Submit to FASHN product-to-model
-      const fashnPrompt = `rave festival model, EDC Las Vegas 2027, neon lights, vibrant energy, ${input.storyName} aesthetic, full body shot`;
+      // Step 2: Submit to FASHN
+      // If user has uploaded a body photo, use model-to-model (person wearing garment).
+      // Otherwise fall back to product-to-model (stock model).
+      // Use tryon-max for both paths:
+      // - With user body photo: product_image (flat-lay) + model_image (user's photo)
+      // - Without user photo: product_image only (FASHN uses a stock model automatically)
+      const usePersonPhoto = !!modelImageUrl;
+      const fashnBody: Record<string, unknown> = {
+        model_name: "tryon-max",
+        inputs: {
+          product_image: garmentImageUrl,
+          ...(usePersonPhoto ? { model_image: modelImageUrl } : {}),
+        },
+        output_format: "png",
+        resolution: "1k",
+      };
+
       const submitRes = await fetch("https://api.fashn.ai/v1/run", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model_name: "product-to-model",
-          product_image: garmentImageUrl,
-          prompt: fashnPrompt,
-          aspect_ratio: "3:4",
-          resolution: "1k",
-          generation_mode: "fast",
-          num_images: 1,
-          output_format: "png",
-        }),
+        body: JSON.stringify(fashnBody),
       });
       if (!submitRes.ok) {
         const err = await submitRes.text();
@@ -501,6 +523,57 @@ export const designRouter = router({
         }
       }
       throw new TRPCError({ code: "TIMEOUT", message: "FASHN render timed out after 90s" });
+    }),
+
+  /**
+   * Upload a body photo for FASHN try-on. Accepts base64-encoded image, uploads to S3,
+   * saves URL to the user's profile.
+   */
+  uploadBodyPhoto: protectedProcedure
+    .input(z.object({
+      base64: z.string().min(1),          // base64-encoded image data (no data: prefix)
+      mimeType: z.string().default("image/jpeg"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Validate MIME type
+      const allowedMimes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+      if (!allowedMimes.includes(input.mimeType)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only JPEG, PNG, or WebP images are accepted" });
+      }
+      // Validate base64 size (10MB limit)
+      const buffer = Buffer.from(input.base64, "base64");
+      if (buffer.length > 10 * 1024 * 1024) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Photo must be under 10MB" });
+      }
+      if (buffer.length < 1000) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Photo appears to be empty or corrupted" });
+      }
+      const { storagePut } = await import("../storage.js");
+      const ext = input.mimeType.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg";
+      const key = `body-photos/${ctx.user.id}-${Date.now()}.${ext}`;
+      const { url } = await storagePut(key, buffer, input.mimeType);
+      // Save URL to user profile
+      const db = await getDb();
+      if (db) {
+        await db.execute(
+          sql`UPDATE users SET body_photo_url = ${url} WHERE id = ${ctx.user.id}`
+        );
+      }
+      return { url };
+    }),
+
+  /**
+   * Get the current user's body photo URL.
+   */
+  getBodyPhoto: protectedProcedure
+    .query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return { url: null };
+      const rows = await db.execute(
+        sql`SELECT body_photo_url FROM users WHERE id = ${ctx.user.id} LIMIT 1`
+      );
+      const url = ((rows as any).rows?.[0] ?? (rows as any)[0])?.body_photo_url ?? null;
+      return { url };
     }),
 
   /**
