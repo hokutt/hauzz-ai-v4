@@ -174,3 +174,9 @@
 - [x] Build Python folder-watcher bridge (hauzz-style3d-bridge.py) — polls S3 inbox, drives Style3D local API, exports DXF + PDF, uploads to S3 outbox
 - [x] Build custom MCP server (hauzz-mcp-server.py) — 3 tools: hauzz_render_garment, hauzz_submit_style3d, hauzz_check_job_status
 - [x] Write setup instructions — full README.md with Mac setup, Claude Desktop config, fabric presets, troubleshooting guide
+
+## FASHN.ai UI Integration + Homepage Polish
+- [x] Wire FASHN.ai render into concept card UI — auto-trigger fashnRender after concepts generate, show loading shimmer on card, display photorealistic render alongside mood board image
+- [x] Fix homepage hero badge — change "EDC Las Vegas 2025" → "EDC Las Vegas 2027"
+- [x] Build "How It Works" section on homepage — 3-step explainer wired to "See How It Works" button
+- [x] Add "My Designs" link to main homepage nav

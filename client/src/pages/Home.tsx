@@ -192,6 +192,15 @@ export default function Home() {
           >
             Festival Map
           </Button>
+          {isAuthenticated && (
+            <Button
+              variant="ghost"
+              className="text-muted-foreground hover:text-foreground text-sm"
+              onClick={() => navigate("/my-designs")}
+            >
+              My Designs
+            </Button>
+          )}
           {isAuthenticated ? (
             <span className="text-xs text-muted-foreground px-3">{user?.name}</span>
           ) : (
@@ -221,7 +230,7 @@ export default function Home() {
           style={{ animationDelay: "0.1s", color: "oklch(0.85 0.18 340)" }}
         >
           <Sparkles className="w-3 h-3" />
-          EDC Las Vegas 2025 — Custom Garment AI
+          EDC Las Vegas 2027 — Custom Garment AI
         </div>
 
         {/* Main headline */}
@@ -258,7 +267,7 @@ export default function Home() {
             size="lg"
             variant="outline"
             className="glass font-semibold text-base px-8 py-6 rounded-2xl text-foreground border-border hover:border-primary"
-            onClick={() => navigate("/design-studio")}
+            onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
           >
             See How It Works
           </Button>
@@ -313,6 +322,126 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── How It Works ── */}
+      <section id="how-it-works" className="relative z-10 px-4 py-24">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <div
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-6 glass"
+              style={{ color: "oklch(0.85 0.18 340)" }}
+            >
+              <Sparkles className="w-3 h-3" />
+              How It Works
+            </div>
+            <h2 className="font-display font-bold text-4xl sm:text-5xl text-foreground mb-4">
+              Three steps to{" "}
+              <span className="text-gradient-pink">your look.</span>
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-lg mx-auto">
+              From vibe to garment in one seamless loop — no designers, no middlemen.
+            </p>
+          </div>
+
+          <div className="relative">
+            {/* Connector line */}
+            <div
+              className="absolute top-16 left-1/2 -translate-x-1/2 w-px h-[calc(100%-8rem)] hidden md:block"
+              style={{ background: "linear-gradient(to bottom, oklch(0.72 0.22 340 / 0.4), oklch(0.55 0.18 280 / 0.2), transparent)" }}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+              {/* Step 1 */}
+              <div className="flex flex-col items-center text-center group">
+                <div
+                  className="relative w-20 h-20 rounded-3xl flex items-center justify-center mb-6 group-hover:animate-pulse-glow transition-all"
+                  style={{ background: "oklch(0.72 0.22 340 / 0.12)", border: "1px solid oklch(0.72 0.22 340 / 0.35)" }}
+                >
+                  <span className="absolute -top-3 -right-3 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black" style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}>1</span>
+                  <svg className="w-9 h-9" viewBox="0 0 36 36" fill="none">
+                    <circle cx="18" cy="12" r="5" stroke="oklch(0.85 0.18 340)" strokeWidth="1.8" />
+                    <path d="M8 28c0-5.5 4.5-10 10-10s10 4.5 10 10" stroke="oklch(0.85 0.18 340)" strokeWidth="1.8" strokeLinecap="round" />
+                    <path d="M24 6l2 2-2 2M28 8h-4" stroke="oklch(0.72 0.22 340)" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <h3 className="font-display font-bold text-xl text-foreground mb-3">Chat Your Vibe</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
+                  Tell our AI agent your aesthetic, colors, and energy. Use voice or text — describe anything from "cosmic rave priestess" to "electric warrior."
+                </p>
+                <div
+                  className="mt-4 px-3 py-1.5 rounded-full text-xs font-semibold glass"
+                  style={{ color: "oklch(0.78 0.20 160)" }}
+                >
+                  Powered by Claude 3.5 Sonnet
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex flex-col items-center text-center group">
+                <div
+                  className="relative w-20 h-20 rounded-3xl flex items-center justify-center mb-6 group-hover:animate-pulse-glow transition-all"
+                  style={{ background: "oklch(0.55 0.18 280 / 0.12)", border: "1px solid oklch(0.55 0.18 280 / 0.35)" }}
+                >
+                  <span className="absolute -top-3 -right-3 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black" style={{ background: "oklch(0.55 0.18 280)", color: "oklch(0.97 0.01 300)" }}>2</span>
+                  <svg className="w-9 h-9" viewBox="0 0 36 36" fill="none">
+                    <rect x="5" y="7" width="26" height="22" rx="3" stroke="oklch(0.75 0.18 280)" strokeWidth="1.8" />
+                    <path d="M10 14h16M10 19h10" stroke="oklch(0.75 0.18 280)" strokeWidth="1.5" strokeLinecap="round" />
+                    <circle cx="26" cy="22" r="4" fill="oklch(0.72 0.22 340 / 0.3)" stroke="oklch(0.85 0.18 340)" strokeWidth="1.5" />
+                    <path d="M24.5 22l1 1 2-2" stroke="oklch(0.85 0.18 340)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <h3 className="font-display font-bold text-xl text-foreground mb-3">AI Builds Concepts</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
+                  The agent scans EDC's venue DNA and generates 2–4 story-led concept directions with mood boards and photorealistic renders. Pick the one that speaks to you.
+                </p>
+                <div
+                  className="mt-4 px-3 py-1.5 rounded-full text-xs font-semibold glass"
+                  style={{ color: "oklch(0.80 0.18 60)" }}
+                >
+                  AI mood boards + FASHN renders
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex flex-col items-center text-center group">
+                <div
+                  className="relative w-20 h-20 rounded-3xl flex items-center justify-center mb-6 group-hover:animate-pulse-glow transition-all"
+                  style={{ background: "oklch(0.78 0.20 200 / 0.12)", border: "1px solid oklch(0.78 0.20 200 / 0.35)" }}
+                >
+                  <span className="absolute -top-3 -right-3 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black" style={{ background: "oklch(0.78 0.20 200)", color: "oklch(0.06 0.02 300)" }}>3</span>
+                  <svg className="w-9 h-9" viewBox="0 0 36 36" fill="none">
+                    <path d="M18 4l3.5 7 7.5 1-5.5 5.5 1.5 7.5L18 22l-7 3.5 1.5-7.5L7 12.5l7.5-1z" stroke="oklch(0.78 0.20 200)" strokeWidth="1.8" strokeLinejoin="round" />
+                    <path d="M12 26l-4 6M24 26l4 6" stroke="oklch(0.78 0.20 200)" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <h3 className="font-display font-bold text-xl text-foreground mb-3">Garment Delivered</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
+                  Lock in your direction and we handle the rest — vendor matching, production specs, quality checks, and delivery. Your custom garment arrives ready to wear.
+                </p>
+                <div
+                  className="mt-4 px-3 py-1.5 rounded-full text-xs font-semibold glass"
+                  style={{ color: "oklch(0.85 0.18 340)" }}
+                >
+                  6–8 weeks to your door
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA below steps */}
+          <div className="text-center mt-16">
+            <Button
+              size="lg"
+              className="glow-pink font-bold text-base px-8 py-6 rounded-2xl group"
+              style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
+              onClick={() => navigate("/festival-map")}
+            >
+              Start Your Design
+              <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Button>
           </div>
         </div>
       </section>

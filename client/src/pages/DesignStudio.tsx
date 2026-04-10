@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Sparkles, Zap, Star, RefreshCw, Check, ChevronRight, Mic, MicOff, Loader2, Package, Palette, Scissors, AlertTriangle, FileText } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, Zap, Star, RefreshCw, Check, ChevronRight, Mic, MicOff, Loader2, Package, Palette, Scissors, AlertTriangle, FileText, Camera } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,15 +33,21 @@ function ConceptCard({
   onSelect,
   onReject,
   index,
+  fashnRender,
 }: {
   concept: ConceptCardData;
   isSelected: boolean;
   onSelect: () => void;
   onReject?: () => void;
   index: number;
+  fashnRender?: { status: "pending" | "loading" | "done" | "error"; url?: string };
 }) {
   const fallbackImages = [RAVE_FASHION, NEBULA_PINK, GALAXY_STARS];
-  const img = concept.imageUrl ?? fallbackImages[index % fallbackImages.length];
+  // Priority: FASHN photorealistic render > AI mood board > fallback stock
+  const displayImg = fashnRender?.status === "done" && fashnRender.url
+    ? fashnRender.url
+    : concept.imageUrl ?? fallbackImages[index % fallbackImages.length];
+  const isRendering = fashnRender?.status === "loading";
 
   return (
     <div
@@ -51,24 +57,70 @@ function ConceptCard({
       onClick={onSelect}
       style={{ minHeight: 280 }}
     >
+      {/* Base image */}
       <img
-        src={img}
+        src={displayImg}
         alt={concept.storyName}
-        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${
+          isRendering ? "opacity-60" : "opacity-100"
+        }`}
         onError={(e) => {
           (e.target as HTMLImageElement).src = fallbackImages[index % fallbackImages.length];
         }}
       />
+
+      {/* FASHN loading shimmer overlay */}
+      {isRendering && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div
+            className="absolute inset-0 animate-pulse"
+            style={{ background: "linear-gradient(135deg, oklch(0.72 0.22 340 / 0.08) 0%, oklch(0.55 0.18 280 / 0.12) 50%, oklch(0.72 0.22 340 / 0.08) 100%)" }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: "linear-gradient(90deg, transparent 0%, oklch(0.85 0.15 340 / 0.15) 50%, transparent 100%)",
+              animation: "shimmer-sweep 1.8s ease-in-out infinite",
+            }}
+          />
+        </div>
+      )}
+
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
 
-      {concept.imageUrl && (
+      {/* Image source badge */}
+      {fashnRender?.status === "done" ? (
+        <div
+          className="absolute top-4 right-12 px-2 py-0.5 rounded-full text-xs glass flex items-center gap-1"
+          style={{ color: "oklch(0.78 0.20 160)" }}
+        >
+          <Camera className="w-3 h-3" />
+          FASHN Render
+        </div>
+      ) : isRendering ? (
+        <div
+          className="absolute top-4 right-12 px-2 py-0.5 rounded-full text-xs glass flex items-center gap-1"
+          style={{ color: "oklch(0.85 0.18 340)" }}
+        >
+          <Loader2 className="w-3 h-3 animate-spin" />
+          Rendering...
+        </div>
+      ) : fashnRender?.status === "error" ? (
+        <div
+          className="absolute top-4 right-12 px-2 py-0.5 rounded-full text-xs glass"
+          style={{ color: "oklch(0.75 0.12 20)" }}
+          title="Photorealistic render unavailable — showing AI mood board"
+        >
+          AI Mood Board
+        </div>
+      ) : concept.imageUrl ? (
         <div
           className="absolute top-4 right-12 px-2 py-0.5 rounded-full text-xs glass"
           style={{ color: "oklch(0.85 0.18 340)" }}
         >
           AI Generated
         </div>
-      )}
+      ) : null}
 
       {isSelected && (
         <div
@@ -322,12 +374,16 @@ export default function DesignStudio() {
     return token;
   });
 
+  // FASHN render state: Map<conceptId, { status: 'pending'|'loading'|'done'|'error', url?: string }>
+  const [fashnRenders, setFashnRenders] = useState<Map<number, { status: "pending" | "loading" | "done" | "error"; url?: string }>>(new Map());
+
   const submitIntakeMutation = trpc.intake.submit.useMutation();
   const guestSubmitMutation = trpc.intake.guestSubmit.useMutation();
   const selectConceptMutation = trpc.design.selectConcept.useMutation();
   const rejectConceptMutation = trpc.design.rejectConcept.useMutation();
   const sendMessageMutation = trpc.aiChat.sendMessage.useMutation();
   const saveMessageMutation = trpc.design.saveMessage.useMutation();
+  const fashnRenderMutation = trpc.design.fashnRender.useMutation();
   const packetQuery = trpc.design.getPacket.useQuery(
     { designRequestId: requestId! },
     { enabled: showPacketModal && requestId !== null }
@@ -386,6 +442,40 @@ export default function DesignStudio() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Auto-trigger FASHN renders when new concepts load (authenticated users only)
+  useEffect(() => {
+    if (!isAuthenticated || concepts.length === 0) return;
+    concepts.forEach((concept) => {
+      if (!concept.imageUrl) return; // need a source image to render from
+      setFashnRenders((prev) => {
+        if (prev.has(concept.id)) return prev; // already queued/done
+        const next = new Map(prev);
+        next.set(concept.id, { status: "loading" });
+        return next;
+      });
+      // Fire the render — don't block UI
+      fashnRenderMutation.mutateAsync({
+        garmentImageUrl: concept.imageUrl!,
+        prompt: `rave festival model, EDC Las Vegas 2027, neon lights, vibrant energy, ${concept.storyName} aesthetic`,
+        aspectRatio: "3:4",
+        resolution: "1k",
+      }).then((result) => {
+        setFashnRenders((prev) => {
+          const next = new Map(prev);
+          next.set(concept.id, { status: "done", url: result.renderUrl });
+          return next;
+        });
+      }).catch(() => {
+        setFashnRenders((prev) => {
+          const next = new Map(prev);
+          next.set(concept.id, { status: "error" });
+          return next;
+        });
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [concepts, isAuthenticated]);
 
   useEffect(() => {
     return () => {
@@ -711,8 +801,7 @@ export default function DesignStudio() {
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4">
+            ) : (              <div className="grid grid-cols-1 gap-4">
                 {concepts.map((concept, i) => (
                   <ConceptCard
                     key={concept.id}
@@ -720,7 +809,9 @@ export default function DesignStudio() {
                     index={i}
                     isSelected={selectedConcept === concept.id}
                     onSelect={() => handleSelectConcept(concept.id)}
-                    onReject={() => handleRejectConcept(concept.id)}
+                    fashnRender={fashnRenders.get(concept.id)}
+                  
+  onReject={() => handleRejectConcept(concept.id)}
                   />
                 ))}
               </div>
