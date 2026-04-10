@@ -1701,26 +1701,57 @@ function PlanetDot({
         )}
       </div>
 
-      {/* Label — show on hover or selected; counter-rotated so text stays upright when canvas is tilted */}
+      {/* Label — always visible (star map style); counter-rotated so text stays upright when canvas is tilted */}
       <div
         className="absolute text-center pointer-events-none"
         style={{
-          bottom: -34,
+          bottom: -38,
           left: "50%",
           transform: "translateX(-50%) rotate(15deg)",
-          width: size + 70,
-          opacity: isActive ? 1 : 0,
+          width: size + 80,
+          opacity: isActive ? 1 : festival.locked ? 0.45 : 0.70,
           transition: "opacity 0.3s ease",
         }}
       >
-        <div className="flex items-center justify-center gap-1">
-          <span className="text-sm leading-none">{theme.icon}</span>
-          <span className="font-display font-bold text-xs whitespace-nowrap" style={{ color: theme.accent }}>
-            {festival.name.replace(/\s*\d{4}$/, "").trim()}
-          </span>
+        {/* Abbreviated name — always shown */}
+        <div
+          className="font-display font-bold whitespace-nowrap text-center leading-none"
+          style={{
+            fontSize: Math.max(9, size * 0.13),
+            color: isActive ? theme.accent : festival.locked ? "oklch(0.65 0.06 300)" : "oklch(0.88 0.08 300)",
+            textShadow: isActive ? `0 0 8px ${theme.accent}` : "0 1px 4px oklch(0.04 0.02 300 / 0.8)",
+            letterSpacing: "0.04em",
+            transition: "color 0.3s ease",
+          }}
+        >
+          {/* Smart abbreviation: explicit short names for known festivals, fallback for others */}
+          {(() => {
+            const shortNames: Record<string, string> = {
+              "edc-lv-2027":           "EDC LV",
+              "lost-in-dreams-2026":   "Lost In Dreams",
+              "hard-summer-2026":      "HARD Summer",
+              "wasteland-2026":        "Wasteland",
+              "nocturnal-2026":        "Nocturnal",
+              "edc-korea-2026":        "EDC Korea",
+              "edc-colombia-2026":     "EDC Colombia",
+              "iii-points-2026":       "III Points",
+              "beyond-chicago-2026":   "Beyond WL",
+              "electric-forest-2026":  "Elec. Forest",
+              "beyond-gorge-2026":     "Beyond Gorge",
+            };
+            return shortNames[festival.id] ?? festival.name.replace(/\s*\d{4}$/, "").trim();
+          })()}
         </div>
-        <div className="text-xs text-muted-foreground truncate">
-          {festival.locked ? "Waitlist" : festival.dates.split("·")[0].trim()}
+        {/* Date / Waitlist — shown on hover or select only */}
+        <div
+          className="text-muted-foreground truncate mt-0.5"
+          style={{
+            fontSize: Math.max(8, size * 0.10),
+            opacity: isActive ? 1 : 0,
+            transition: "opacity 0.3s ease",
+          }}
+        >
+          {festival.locked ? "🔒 Waitlist" : festival.dates.split("·")[0].trim()}
         </div>
       </div>
     </div>

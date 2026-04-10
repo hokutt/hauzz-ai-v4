@@ -221,3 +221,6 @@
 - [x] Increase canvas padding to 120px + overflow-visible to prevent tilt clipping
 - [x] Counter-rotate planet labels +15° so text stays upright
 - [x] Scale calculation reserves 280px for quick-select panel on desktop
+
+## Planet Labels Always Visible (Apr 10)
+- [x] Show abbreviated planet name labels at all times (not just hover/select) — star map style with explicit short names per festival, date/waitlist status shown on hover only
