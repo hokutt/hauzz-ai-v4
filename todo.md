@@ -159,3 +159,9 @@
 - [x] Anonymous concept generation — guestSubmit procedure + guestToken in localStorage; guests generate concepts freely, sign-in gate only at concept selection/packet step with inline sign-in prompt in chat
 - [x] Festival map overhaul — EDC updated to 2027, 8 Insomniac festivals added as planets (HARD Summer, Nocturnal Wonderland, Lost In Dreams, Wasteland, EDC Korea, EDC Colombia, III Points); locked waitlist cards for festivals under 3 months out (Forbidden Kingdom, Beyond Wonderland Chicago, Electric Forest, Beyond Wonderland Gorge)
 - [x] Waitlist capture — locked festival cards show email form calling trpc.design.joinWaitlist, saves to festival_waitlist table with dedup (unique email+festivalId constraint), success toast shown
+
+## Festival Map Planet Redesign
+- [x] Give each Insomniac festival planet a unique color, glow, size, orbit speed, and vibe descriptor — done via direct GitHub commits (SVG surface art per planet, themed colors: purple/Lost In Dreams, red/HARD Summer, orange/Wasteland, blue/Nocturnal, teal/EDC Korea, green/EDC Colombia)
+
+## Planet Visual Redesign (Round 2)
+- [x] Redesign all festival planets with unique SVG: rings, atmospheric glow layers, surface textures/patterns, distinct silhouettes — each planet now has dramatically distinct colors, multi-band rings (Lost In Dreams, Nocturnal, EDC Korea get double rings), boosted saturation, and screen blend mode for surface art visibility

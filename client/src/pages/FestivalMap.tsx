@@ -47,6 +47,11 @@ interface PlanetTheme {
   // Optional ring color
   ring?: string;
   ringOpacity?: number;
+  // Optional second and third rings
+  ring2?: string;
+  ring2Opacity?: number;
+  ring3?: string;
+  ring3Opacity?: number;
   // Atmosphere hue
   atmosphereHue: string;
   // Surface detail type
@@ -94,20 +99,22 @@ const FESTIVALS: Festival[] = [
     attendees: "30,000+",
     vibe: "Dreamy",
     vibeTags: ["Dreamy", "Ethereal", "Pastel", "Soft", "Surreal"],
-    color: "280",
+    color: "290",
     locked: false,
     theme: {
       surface: [
-        "oklch(0.82 0.14 280)",
-        "oklch(0.65 0.18 300)",
-        "oklch(0.35 0.12 260)",
+        "oklch(0.88 0.20 300)",
+        "oklch(0.62 0.28 280)",
+        "oklch(0.28 0.18 260)",
       ],
-      ring: "oklch(0.78 0.16 290)",
-      ringOpacity: 0.5,
-      atmosphereHue: "280",
+      ring: "oklch(0.92 0.18 310)",
+      ringOpacity: 0.85,
+      ring2: "oklch(0.78 0.22 280)",
+      ring2Opacity: 0.45,
+      atmosphereHue: "290",
       detail: "dreamy",
       icon: "✨",
-      accent: "oklch(0.82 0.16 280)",
+      accent: "oklch(0.90 0.22 300)",
     },
   },
   {
@@ -119,18 +126,18 @@ const FESTIVALS: Festival[] = [
     attendees: "65,000+",
     vibe: "Hard",
     vibeTags: ["Gritty", "Industrial", "Dark", "Bass", "Edgy"],
-    color: "30",
+    color: "25",
     locked: false,
     theme: {
       surface: [
-        "oklch(0.55 0.18 30)",
-        "oklch(0.28 0.10 20)",
-        "oklch(0.10 0.04 300)",
+        "oklch(0.72 0.28 25)",
+        "oklch(0.38 0.22 15)",
+        "oklch(0.08 0.04 300)",
       ],
-      atmosphereHue: "30",
+      atmosphereHue: "25",
       detail: "industrial",
       icon: "🔥",
-      accent: "oklch(0.75 0.20 30)",
+      accent: "oklch(0.85 0.28 25)",
     },
   },
   {
@@ -142,18 +149,20 @@ const FESTIVALS: Festival[] = [
     attendees: "20,000+",
     vibe: "Post-Apocalyptic",
     vibeTags: ["Dark", "Industrial", "Leather", "Cyber", "Dystopian"],
-    color: "60",
+    color: "85",
     locked: false,
     theme: {
       surface: [
-        "oklch(0.50 0.14 60)",
-        "oklch(0.30 0.10 45)",
-        "oklch(0.12 0.04 300)",
+        "oklch(0.65 0.26 85)",
+        "oklch(0.35 0.18 70)",
+        "oklch(0.10 0.06 300)",
       ],
-      atmosphereHue: "55",
+      ring: "oklch(0.78 0.30 85)",
+      ringOpacity: 0.60,
+      atmosphereHue: "85",
       detail: "wasteland",
       icon: "☢️",
-      accent: "oklch(0.70 0.18 60)",
+      accent: "oklch(0.80 0.28 85)",
     },
   },
   {
@@ -165,20 +174,22 @@ const FESTIVALS: Festival[] = [
     attendees: "40,000+",
     vibe: "Nocturnal",
     vibeTags: ["Dark", "Mystical", "Glitter", "Night", "Enchanted"],
-    color: "260",
+    color: "255",
     locked: false,
     theme: {
       surface: [
-        "oklch(0.38 0.20 260)",
-        "oklch(0.20 0.14 280)",
-        "oklch(0.08 0.04 300)",
+        "oklch(0.55 0.28 255)",
+        "oklch(0.28 0.22 270)",
+        "oklch(0.06 0.04 300)",
       ],
-      ring: "oklch(0.70 0.18 260)",
-      ringOpacity: 0.45,
-      atmosphereHue: "260",
+      ring: "oklch(0.80 0.22 255)",
+      ringOpacity: 0.70,
+      ring2: "oklch(0.65 0.18 240)",
+      ring2Opacity: 0.35,
+      atmosphereHue: "255",
       detail: "nocturnal",
       icon: "🌙",
-      accent: "oklch(0.75 0.18 260)",
+      accent: "oklch(0.82 0.24 255)",
     },
   },
   {
@@ -190,20 +201,24 @@ const FESTIVALS: Festival[] = [
     attendees: "50,000+",
     vibe: "K-Rave",
     vibeTags: ["Futuristic", "Neon", "K-Pop", "Holographic", "Electric"],
-    color: "200",
+    color: "195",
     locked: false,
     theme: {
       surface: [
-        "oklch(0.72 0.20 200)",
-        "oklch(0.45 0.18 220)",
-        "oklch(0.15 0.06 300)",
+        "oklch(0.85 0.26 195)",
+        "oklch(0.55 0.30 210)",
+        "oklch(0.18 0.10 300)",
       ],
-      ring: "oklch(0.80 0.18 200)",
-      ringOpacity: 0.55,
-      atmosphereHue: "200",
+      ring: "oklch(0.92 0.24 195)",
+      ringOpacity: 0.80,
+      ring2: "oklch(0.75 0.20 220)",
+      ring2Opacity: 0.50,
+      ring3: "oklch(0.60 0.16 240)",
+      ring3Opacity: 0.25,
+      atmosphereHue: "195",
       detail: "krave",
       icon: "🌐",
-      accent: "oklch(0.80 0.20 200)",
+      accent: "oklch(0.90 0.26 195)",
     },
   },
   {
@@ -215,20 +230,18 @@ const FESTIVALS: Festival[] = [
     attendees: "40,000+",
     vibe: "Tropical Electric",
     vibeTags: ["Vibrant", "Tropical", "Electric", "Color", "Latin"],
-    color: "150",
+    color: "145",
     locked: false,
     theme: {
       surface: [
-        "oklch(0.70 0.22 150)",
-        "oklch(0.50 0.18 130)",
-        "oklch(0.18 0.08 300)",
+        "oklch(0.82 0.30 145)",
+        "oklch(0.58 0.28 120)",
+        "oklch(0.22 0.12 300)",
       ],
-      ring: "oklch(0.75 0.20 150)",
-      ringOpacity: 0.4,
-      atmosphereHue: "150",
+      atmosphereHue: "145",
       detail: "tropical",
       icon: "🌴",
-      accent: "oklch(0.78 0.22 150)",
+      accent: "oklch(0.88 0.30 145)",
     },
   },
   {
@@ -240,20 +253,20 @@ const FESTIVALS: Festival[] = [
     attendees: "25,000+",
     vibe: "Art-Forward",
     vibeTags: ["Art", "Minimal", "Techno", "Underground", "Creative"],
-    color: "180",
+    color: "50",
     locked: false,
     theme: {
       surface: [
-        "oklch(0.60 0.18 180)",
-        "oklch(0.35 0.12 190)",
-        "oklch(0.12 0.05 300)",
+        "oklch(0.78 0.26 50)",
+        "oklch(0.50 0.20 40)",
+        "oklch(0.15 0.08 300)",
       ],
-      ring: "oklch(0.68 0.16 180)",
-      ringOpacity: 0.35,
-      atmosphereHue: "180",
+      ring: "oklch(0.88 0.24 50)",
+      ringOpacity: 0.65,
+      atmosphereHue: "50",
       detail: "artdeco",
       icon: "🎨",
-      accent: "oklch(0.72 0.18 180)",
+      accent: "oklch(0.88 0.26 50)",
     },
   },
   // ── LOCKED ──
@@ -526,11 +539,10 @@ function PlanetSurface({ detail, size, hue }: { detail: Festival["theme"]["detai
         </svg>
       );
 
-    // ── HARD Summer: Scorched industrial hellscape ───────────────────────────
+    // ── HARD Summer: Scorched industrial hellscape ───────────────────────────────────────
     case "industrial":
       return (
-        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "overlay" }}>
-          {/* Large impact crater (main) */}
+        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "screen" }}>       {/* Large impact crater (main) */}
           <circle cx={cx - r*0.22} cy={cy - r*0.20} r={r * 0.30} fill={`oklch(0.15 0.06 ${hue} / 0.60)`} />
           <circle cx={cx - r*0.22} cy={cy - r*0.20} r={r * 0.30} fill="none" stroke={`oklch(0.75 0.22 ${hue})`} strokeWidth="2.5" opacity="0.65" />
           <circle cx={cx - r*0.22} cy={cy - r*0.20} r={r * 0.38} fill="none" stroke={`oklch(0.65 0.18 ${hue})`} strokeWidth="1" opacity="0.35" />
@@ -564,7 +576,7 @@ function PlanetSurface({ detail, size, hue }: { detail: Festival["theme"]["detai
     // ── Wasteland: Post-apocalyptic toxic world ──────────────────────────────
     case "wasteland":
       return (
-        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "overlay" }}>
+        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "screen" }}>
           {/* Radiation symbol — 3 blades */}
           {[0, 120, 240].map((deg) => {
             const rad = (deg * Math.PI) / 180;
@@ -856,7 +868,7 @@ function PlanetSurface({ detail, size, hue }: { detail: Festival["theme"]["detai
     // ── Electric Forest: Living enchanted forest world ───────────────────────
     case "forest":
       return (
-        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "overlay" }}>
+        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "screen" }}>
           {/* Tree silhouette ring */}
           {[-0.55, -0.28, 0.0, 0.28, 0.55].map((dx, i) => {
             const baseY = cy + r * 0.30;
@@ -913,7 +925,7 @@ function PlanetSurface({ detail, size, hue }: { detail: Festival["theme"]["detai
     // ── Beyond Wonderland at the Gorge: Pacific Northwest scenic world ───────
     case "gorge":
       return (
-        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "overlay" }}>
+        <svg width={size} height={size} className="absolute inset-0 pointer-events-none" style={{ mixBlendMode: "screen" }}>
           {/* Sky gradient band */}
           <ellipse cx={cx} cy={cy - r*0.35} rx={r*0.88} ry={r*0.50}
             fill={`oklch(0.65 0.18 ${hue} / 0.22)`} />
@@ -1027,16 +1039,51 @@ function Planet({
         <div
           className="absolute pointer-events-none transition-all duration-500"
           style={{
-            width: size + 28,
-            height: (size + 28) * 0.28,
-            top: bodySize * 0.36,
-            left: -4,
+            width: size + 36,
+            height: (size + 36) * 0.26,
+            top: bodySize * 0.37,
+            left: -8,
             borderRadius: "50%",
-            border: `2px solid ${theme.ring}`,
-            opacity: isActive ? (theme.ringOpacity ?? 0.5) * 1.4 : (theme.ringOpacity ?? 0.5),
-            transform: `rotateX(72deg) ${isActive ? "scale(1.05)" : "scale(1)"}`,
-            boxShadow: isActive ? `0 0 12px ${theme.ring}` : "none",
+            border: `3px solid ${theme.ring}`,
+            opacity: isActive ? Math.min((theme.ringOpacity ?? 0.5) * 1.5, 1) : (theme.ringOpacity ?? 0.5),
+            transform: `rotateX(70deg) ${isActive ? "scale(1.06)" : "scale(1)"}`,
+            boxShadow: isActive ? `0 0 18px 4px ${theme.ring}, 0 0 6px 1px ${theme.ring}` : `0 0 6px 1px ${theme.ring}`,
             transition: "opacity 0.5s ease, box-shadow 0.5s ease",
+          }}
+        />
+      )}
+      {/* Second ring */}
+      {theme.ring2 && (
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            width: size + 52,
+            height: (size + 52) * 0.22,
+            top: bodySize * 0.39,
+            left: -16,
+            borderRadius: "50%",
+            border: `2px solid ${theme.ring2}`,
+            opacity: isActive ? Math.min((theme.ring2Opacity ?? 0.35) * 1.4, 1) : (theme.ring2Opacity ?? 0.35),
+            transform: "rotateX(70deg)",
+            boxShadow: isActive ? `0 0 10px 2px ${theme.ring2}` : "none",
+            transition: "opacity 0.5s ease",
+          }}
+        />
+      )}
+      {/* Third ring */}
+      {theme.ring3 && (
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            width: size + 68,
+            height: (size + 68) * 0.18,
+            top: bodySize * 0.41,
+            left: -24,
+            borderRadius: "50%",
+            border: `1.5px solid ${theme.ring3}`,
+            opacity: isActive ? Math.min((theme.ring3Opacity ?? 0.25) * 1.4, 1) : (theme.ring3Opacity ?? 0.25),
+            transform: "rotateX(70deg)",
+            transition: "opacity 0.5s ease",
           }}
         />
       )}
