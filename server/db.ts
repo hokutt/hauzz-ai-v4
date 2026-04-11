@@ -16,8 +16,9 @@ import {
   vendors,
   venueDna,
   venues,
+  userMeasurements,
 } from "../drizzle/schema";
-import type { InsertDesignRequest, InsertConceptCard, InsertChatMessage } from "../drizzle/schema";
+import type { InsertDesignRequest, InsertConceptCard, InsertChatMessage, InsertUserMeasurement } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -239,6 +240,7 @@ export async function insertDesignPacket(data: {
   productionRiskScore: number;
   fileUrl?: string;
   fileKey?: string;
+  measurements?: import("../drizzle/schema").MeasurementsSnapshot | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -408,4 +410,35 @@ export async function getAllAgentLogs(limit = 100) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(agentLogs).orderBy(desc(agentLogs.createdAt)).limit(limit);
+}
+
+// ─── User Measurements ──────────────────────────────────────────────────────
+
+export async function getUserMeasurements(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(userMeasurements).where(eq(userMeasurements.userId, userId)).limit(1);
+  return result[0] ?? undefined;
+}
+
+export async function upsertUserMeasurements(data: InsertUserMeasurement) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(userMeasurements).values(data).onConflictDoUpdate({
+    target: userMeasurements.userId,
+    set: {
+      bust: data.bust,
+      waist: data.waist,
+      hips: data.hips,
+      inseam: data.inseam,
+      shoulder: data.shoulder,
+      height: data.height,
+      sizeLabel: data.sizeLabel,
+      fitPreference: data.fitPreference,
+      lengthPreference: data.lengthPreference,
+      source: data.source,
+      updatedAt: sql`now()`,
+    },
+  });
+  return getUserMeasurements(data.userId);
 }

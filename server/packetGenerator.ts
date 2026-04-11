@@ -1,8 +1,9 @@
 import { storagePut } from "./storage";
 import { agentLog } from "./agentLogger";
-import { getConceptCardById, insertDesignPacket, getDesignPacketByRequestId, updateDesignRequestStatus } from "./db";
+import { getConceptCardById, insertDesignPacket, getDesignPacketByRequestId, updateDesignRequestStatus, getDesignRequestById, getUserMeasurements } from "./db";
 import { DesignPacketSchema, type DesignPacketData } from "../shared/schemas";
 import { nanoid } from "nanoid";
+import type { MeasurementsSnapshot } from "../drizzle/schema";
 
 /**
  * Generates a structured design packet from an approved concept card,
@@ -32,7 +33,49 @@ export async function generateDesignPacket(
     throw new Error(`Concept card ${conceptCardId} not found`);
   }
 
-  // 2. Build the packet data
+  // 2. Fetch user measurements for embedding in the packet
+  let measurementsSnapshot: MeasurementsSnapshot | null = null;
+  try {
+    const request = await getDesignRequestById(designRequestId);
+    if (request) {
+      const measurements = await getUserMeasurements(request.userId);
+      if (measurements) {
+        measurementsSnapshot = {
+          bust: measurements.bust ?? undefined,
+          waist: measurements.waist ?? undefined,
+          hips: measurements.hips ?? undefined,
+          inseam: measurements.inseam ?? undefined,
+          shoulder: measurements.shoulder ?? undefined,
+          height: measurements.height ?? undefined,
+          sizeLabel: measurements.sizeLabel ?? undefined,
+          fitPreference: measurements.fitPreference,
+          lengthPreference: measurements.lengthPreference,
+        };
+        await agentLog({
+          designRequestId,
+          stage: "packet_generation",
+          message: `User measurements found: size ${measurements.sizeLabel ?? "custom"}, bust ${measurements.bust ?? "N/A"}", waist ${measurements.waist ?? "N/A"}", hips ${measurements.hips ?? "N/A"}"`,
+          payload: measurementsSnapshot,
+        });
+      } else {
+        await agentLog({
+          designRequestId,
+          stage: "packet_generation",
+          level: "warn",
+          message: "No user measurements found — packet will be generated without sizing data",
+        });
+      }
+    }
+  } catch (err) {
+    await agentLog({
+      designRequestId,
+      stage: "packet_generation",
+      level: "warn",
+      message: `Failed to fetch user measurements: ${err instanceof Error ? err.message : String(err)}`,
+    });
+  }
+
+  // 3. Build the packet data
   const garmentList = concept.garmentList as any[];
   const constructionNotes = garmentList
     .map(g => `${g.garmentType}: ${g.constructionNotes}`)
@@ -65,11 +108,12 @@ export async function generateDesignPacket(
     },
   });
 
-  // 4. Serialize and upload to S3
+  // 4. Serialize and upload to S3 (include measurements in the JSON payload)
   const packetJson = JSON.stringify({
     ...validated,
+    measurements: measurementsSnapshot,
     generatedAt: new Date().toISOString(),
-    version: "1.0",
+    version: "1.1",
   }, null, 2);
 
   const fileKey = `design-packets/${designRequestId}-${nanoid(8)}.json`;
@@ -96,7 +140,7 @@ export async function generateDesignPacket(
     });
   }
 
-  // 5. Persist packet to DB
+  // 5. Persist packet to DB (with measurements snapshot)
   await insertDesignPacket({
     designRequestId,
     conceptCardId,
@@ -109,6 +153,7 @@ export async function generateDesignPacket(
     productionRiskScore: validated.productionRiskScore,
     fileUrl,
     fileKey: fileKeyStored,
+    measurements: measurementsSnapshot,
   });
 
   // 6. Update design request status

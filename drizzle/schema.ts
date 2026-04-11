@@ -174,8 +174,22 @@ export const designPackets = pgTable("design_packets", {
   productionRiskScore: doublePrecision("production_risk_score").notNull(),
   fileUrl: varchar("file_url", { length: 1024 }),
   fileKey: varchar("file_key", { length: 512 }),
+  measurements: jsonb("measurements").$type<MeasurementsSnapshot | null>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+/** Snapshot of user measurements embedded in design packets for vendor visibility */
+export type MeasurementsSnapshot = {
+  bust?: number;
+  waist?: number;
+  hips?: number;
+  inseam?: number;
+  shoulder?: number;
+  height?: number;
+  sizeLabel?: string;
+  fitPreference: string;
+  lengthPreference: string;
+};
 
 export type DesignPacket = typeof designPackets.$inferSelect;
 
@@ -296,3 +310,30 @@ export const agentLogs = pgTable("agent_logs", {
 });
 
 export type AgentLog = typeof agentLogs.$inferSelect;
+
+// ─── Measurement Enums ──────────────────────────────────────────────────────
+
+export const fitPreferenceEnum = pgEnum("fit_preference", ["fitted", "relaxed", "oversized"]);
+export const lengthPreferenceEnum = pgEnum("length_preference", ["true_to_size", "runs_small", "runs_large"]);
+
+// ─── User Measurements ──────────────────────────────────────────────────────
+
+export const userMeasurements = pgTable("user_measurements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id).unique(),
+  bust: doublePrecision("bust"),           // inches
+  waist: doublePrecision("waist"),         // inches
+  hips: doublePrecision("hips"),           // inches
+  inseam: doublePrecision("inseam"),       // inches
+  shoulder: doublePrecision("shoulder"),   // inches
+  height: doublePrecision("height"),       // inches (optional, useful for vendors)
+  sizeLabel: varchar("size_label", { length: 8 }), // XS, S, M, L, XL, XXL
+  fitPreference: fitPreferenceEnum("fit_preference").default("relaxed").notNull(),
+  lengthPreference: lengthPreferenceEnum("length_preference").default("true_to_size").notNull(),
+  source: varchar("source", { length: 32 }).default("manual").notNull(), // manual | size-chart | ai-estimate
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type UserMeasurement = typeof userMeasurements.$inferSelect;
+export type InsertUserMeasurement = typeof userMeasurements.$inferInsert;

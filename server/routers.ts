@@ -8,6 +8,7 @@ import { productionRouter } from "./routers/production";
 import { adminRouter } from "./routers/admin";
 import { voiceRouter } from "./routers/voice";
 import { aiChatRouter } from "./routers/aiChat";
+import { measurementsRouter } from "./routers/measurements";
 
 export const appRouter = router({
   system: systemRouter,
@@ -28,6 +29,7 @@ export const appRouter = router({
   admin: adminRouter,         // Founder admin dashboard (full access)
   voice: voiceRouter,           // Voice intake transcription (Whisper)
   aiChat: aiChatRouter,         // Claude-powered chat + vendor email drafting
+  measurements: measurementsRouter, // User body measurements & sizing
 });
 
 export type AppRouter = typeof appRouter;

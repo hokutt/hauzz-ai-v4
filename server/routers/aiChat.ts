@@ -115,6 +115,17 @@ DESIGN PACKET SUMMARY:
 - Garments: ${JSON.stringify(packet.garmentList ?? [])}
 - Materials: ${JSON.stringify(packet.materials ?? [])}
 - Production Risk Score: ${packet.productionRiskScore ?? "N/A"}
+${(packet as any).measurements ? `
+CLIENT MEASUREMENTS:
+- Bust: ${(packet as any).measurements.bust ?? "N/A"}"
+- Waist: ${(packet as any).measurements.waist ?? "N/A"}"
+- Hips: ${(packet as any).measurements.hips ?? "N/A"}"
+- Inseam: ${(packet as any).measurements.inseam ?? "N/A"}"
+- Shoulder: ${(packet as any).measurements.shoulder ?? "N/A"}"
+- Height: ${(packet as any).measurements.height ?? "N/A"}"
+- Size Label: ${(packet as any).measurements.sizeLabel ?? "Custom"}
+- Fit Preference: ${(packet as any).measurements.fitPreference ?? "N/A"}
+- Length Preference: ${(packet as any).measurements.lengthPreference ?? "N/A"}` : "\nNOTE: Client measurements not yet provided."}
 
 Write a 150-200 word email that:
 1. Introduces HAUZZ.AI briefly (1 sentence)

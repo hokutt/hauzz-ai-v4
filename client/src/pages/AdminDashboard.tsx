@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, LayoutDashboard, Users, Package, Truck, Activity,
   ChevronRight, RefreshCw, Zap, Star, CheckCircle, Clock, AlertCircle,
-  Mail, Loader2, Copy, Check, ListChecks, Download
+  Mail, Loader2, Copy, Check, ListChecks, Download, Ruler
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -204,6 +204,39 @@ function PipelineDetail({ requestId, onClose }: { requestId: number; onClose: ()
                       View packet JSON →
                     </a>
                   )}
+                  {/* Client Measurements */}
+                  {(data.packet as any).measurements && (() => {
+                    const m = (data.packet as any).measurements as { bust?: number; waist?: number; hips?: number; inseam?: number; shoulder?: number; height?: number; sizeLabel?: string; fitPreference?: string; lengthPreference?: string };
+                    const entries = [
+                      { label: "Bust", v: m.bust },
+                      { label: "Waist", v: m.waist },
+                      { label: "Hips", v: m.hips },
+                      { label: "Inseam", v: m.inseam },
+                      { label: "Shoulder", v: m.shoulder },
+                      { label: "Height", v: m.height },
+                    ].filter(e => e.v != null);
+                    return (
+                      <div className="mt-3 pt-3 border-t border-border/30">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Ruler className="w-3.5 h-3.5" style={{ color: "oklch(0.85 0.18 340)" }} />
+                          <span className="text-xs font-semibold text-foreground">Client Measurements</span>
+                          {m.sizeLabel && <span className="text-xs px-1.5 py-0.5 rounded-full glass" style={{ color: "oklch(0.85 0.18 340)" }}>{m.sizeLabel}</span>}
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {entries.map((e) => (
+                            <div key={e.label} className="text-center py-1 rounded-lg" style={{ background: "oklch(0.12 0.03 300)" }}>
+                              <p className="text-[10px] text-muted-foreground">{e.label}</p>
+                              <p className="text-xs font-bold text-foreground">{e.v}"</p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex gap-1.5 mt-1.5">
+                          {m.fitPreference && <span className="text-[10px] px-1.5 py-0.5 rounded glass text-muted-foreground">Fit: {m.fitPreference}</span>}
+                          {m.lengthPreference && <span className="text-[10px] px-1.5 py-0.5 rounded glass text-muted-foreground">Length: {m.lengthPreference.replace(/_/g, " ")}</span>}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}

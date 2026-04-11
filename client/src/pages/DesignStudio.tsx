@@ -14,6 +14,7 @@ import { getLoginUrl } from "@/const";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/useMobile";
+import { Ruler } from "lucide-react";
 
 const RAVE_FASHION = "https://d2xsxph8kpxj0f.cloudfront.net/310519663522663012/FxMGuZEdHFz8kEGUUru2UP/rave-fashion_d9f3949e.jpg";
 const NEBULA_PINK = "https://d2xsxph8kpxj0f.cloudfront.net/310519663522663012/FxMGuZEdHFz8kEGUUru2UP/nebula-pink_118da7c1.jpg";
@@ -438,6 +439,19 @@ export default function DesignStudio() {
   const uploadBodyPhotoMutation = trpc.design.uploadBodyPhoto.useMutation({
     onSuccess: () => { bodyPhotoQuery.refetch(); toast.success("Photo saved! Try On will now use your photo."); },
     onError: (e) => toast.error(`Upload failed: ${e.message}`),
+  });
+
+  // ── Measurements gating ──────────────────────────────────────────────────
+  const measurementsQuery = trpc.measurements.get.useQuery(undefined, { enabled: isAuthenticated });
+  const hasMeasurements = !!measurementsQuery.data;
+  const [sizingBannerExpanded, setSizingBannerExpanded] = useState(false);
+  const [quickBust, setQuickBust] = useState("");
+  const [quickWaist, setQuickWaist] = useState("");
+  const [quickHips, setQuickHips] = useState("");
+  const [quickSize, setQuickSize] = useState("");
+  const quickSaveMutation = trpc.measurements.save.useMutation({
+    onSuccess: () => { measurementsQuery.refetch(); setSizingBannerExpanded(false); toast.success("Measurements saved!"); },
+    onError: (e) => toast.error(e.message),
   });
 
   const submitIntakeMutation = trpc.intake.submit.useMutation();
@@ -1137,6 +1151,104 @@ export default function DesignStudio() {
         </div>
       </nav>
 
+      {/* ── Sizing Gating Banner ── */}
+      {isAuthenticated && !hasMeasurements && !measurementsQuery.isLoading && (
+        <div
+          className="flex-shrink-0 px-4 sm:px-6 py-3 border-b border-border"
+          style={{ background: "oklch(0.72 0.22 340 / 0.06)", borderColor: "oklch(0.72 0.22 340 / 0.2)" }}
+        >
+          {!sizingBannerExpanded ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Ruler className="w-4 h-4 flex-shrink-0" style={{ color: "oklch(0.85 0.18 340)" }} />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Quick sizing — takes 30 seconds</p>
+                  <p className="text-xs text-muted-foreground">Measurements are required for production. Add them now or later.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs rounded-xl"
+                  onClick={() => setSizingBannerExpanded(true)}
+                >
+                  Quick Add
+                </Button>
+                <Button
+                  size="sm"
+                  className="text-xs rounded-xl font-semibold"
+                  style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
+                  onClick={() => navigate("/fit-profile")}
+                >
+                  Full Profile
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Ruler className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
+                  Quick Measurements
+                </p>
+                <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setSizingBannerExpanded(false)}>Close</button>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Bust (in)</label>
+                  <Input type="number" step="0.5" placeholder="e.g. 34" value={quickBust} onChange={(e) => setQuickBust(e.target.value)} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Waist (in)</label>
+                  <Input type="number" step="0.5" placeholder="e.g. 27" value={quickWaist} onChange={(e) => setQuickWaist(e.target.value)} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Hips (in)</label>
+                  <Input type="number" step="0.5" placeholder="e.g. 37" value={quickHips} onChange={(e) => setQuickHips(e.target.value)} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">General Size</label>
+                  <select
+                    className="w-full h-8 text-sm rounded-md border border-border bg-background px-2"
+                    value={quickSize}
+                    onChange={(e) => setQuickSize(e.target.value)}
+                  >
+                    <option value="">Select</option>
+                    {["XS", "S", "M", "L", "XL", "XXL"].map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  className="text-xs rounded-xl font-semibold"
+                  style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
+                  disabled={quickSaveMutation.isPending || (!quickBust && !quickWaist && !quickHips && !quickSize)}
+                  onClick={() => quickSaveMutation.mutate({
+                    bust: quickBust ? parseFloat(quickBust) : undefined,
+                    waist: quickWaist ? parseFloat(quickWaist) : undefined,
+                    hips: quickHips ? parseFloat(quickHips) : undefined,
+                    sizeLabel: (quickSize as any) || undefined,
+                    fitPreference: "relaxed",
+                    lengthPreference: "true_to_size",
+                    source: "manual",
+                  })}
+                >
+                  {quickSaveMutation.isPending ? "Saving..." : "Save & Continue"}
+                </Button>
+                <button
+                  className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground"
+                  onClick={() => navigate("/fit-profile")}
+                >
+                  Full fit profile instead
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Layout: Desktop split pane / Mobile tabs ── */}
       {isMobile ? (
         /* ── MOBILE: Tab-based layout ── */
@@ -1297,6 +1409,40 @@ export default function DesignStudio() {
                         </a>
                       )}
                     </div>
+
+                    {/* Measurements */}
+                    {(pkt as any).measurements && (() => {
+                      const m = (pkt as any).measurements as { bust?: number; waist?: number; hips?: number; inseam?: number; shoulder?: number; height?: number; sizeLabel?: string; fitPreference?: string; lengthPreference?: string };
+                      const entries = [
+                        { label: "Bust", value: m.bust },
+                        { label: "Waist", value: m.waist },
+                        { label: "Hips", value: m.hips },
+                        { label: "Inseam", value: m.inseam },
+                        { label: "Shoulder", value: m.shoulder },
+                        { label: "Height", value: m.height },
+                      ].filter(e => e.value != null);
+                      return (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <Ruler className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
+                            <span className="text-sm font-semibold text-foreground">Client Measurements</span>
+                            {m.sizeLabel && <Badge variant="secondary" className="text-xs">{m.sizeLabel}</Badge>}
+                          </div>
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                            {entries.map((e) => (
+                              <div key={e.label} className="text-center p-2 rounded-lg" style={{ background: "oklch(0.12 0.03 300)", border: "1px solid oklch(0.72 0.22 340 / 0.15)" }}>
+                                <p className="text-xs text-muted-foreground">{e.label}</p>
+                                <p className="text-sm font-bold text-foreground">{e.value}"</p>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {m.fitPreference && <Badge variant="outline" className="text-xs">Fit: {m.fitPreference}</Badge>}
+                            {m.lengthPreference && <Badge variant="outline" className="text-xs">Length: {m.lengthPreference.replace(/_/g, " ")}</Badge>}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Palette */}
                     <div>
