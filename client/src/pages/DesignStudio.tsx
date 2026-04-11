@@ -2,15 +2,18 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Sparkles, Zap, Star, RefreshCw, Check, ChevronRight, Mic, MicOff, Loader2, Package, Palette, Scissors, AlertTriangle, FileText, Camera } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, Zap, Star, RefreshCw, Check, ChevronRight, Mic, MicOff, Loader2, Package, Palette, Scissors, AlertTriangle, FileText, Camera, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/useMobile";
 
 const RAVE_FASHION = "https://d2xsxph8kpxj0f.cloudfront.net/310519663522663012/FxMGuZEdHFz8kEGUUru2UP/rave-fashion_d9f3949e.jpg";
 const NEBULA_PINK = "https://d2xsxph8kpxj0f.cloudfront.net/310519663522663012/FxMGuZEdHFz8kEGUUru2UP/nebula-pink_118da7c1.jpg";
@@ -37,6 +40,7 @@ function ConceptCard({
   fashnRender,
   onTryOn,
   hasBodyPhoto,
+  onViewTryOn,
 }: {
   concept: ConceptCardData;
   isSelected: boolean;
@@ -44,6 +48,7 @@ function ConceptCard({
   onReject?: () => void;
   onTryOn?: () => void;
   hasBodyPhoto?: boolean;
+  onViewTryOn?: () => void;
   index: number;
   fashnRender?: { status: "pending" | "loading" | "done" | "error"; url?: string; flatLayUrl?: string };
 }) {
@@ -53,6 +58,9 @@ function ConceptCard({
     ? fashnRender.url
     : concept.imageUrl ?? fallbackImages[index % fallbackImages.length];
   const isRendering = fashnRender?.status === "loading";
+  const isDone = fashnRender?.status === "done";
+  // Try On is disabled when there's no body photo uploaded
+  const tryOnDisabled = !hasBodyPhoto;
 
   return (
     <div
@@ -193,16 +201,44 @@ function ConceptCard({
               </button>
             </>
           ) : null}
-          {/* Try On button — generates flat-lay then FASHN model render */}
-          {onTryOn && fashnRender?.status !== "done" && !isRendering && (
+          {/* Try On button — disabled/grayed out until body photo is uploaded */}
+          {onTryOn && !isDone && !isRendering && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  <button
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                    style={{
+                      background: tryOnDisabled ? "oklch(0.20 0.04 300 / 0.5)" : "oklch(0.55 0.18 280 / 0.15)",
+                      color: tryOnDisabled ? "oklch(0.45 0.06 300)" : "oklch(0.78 0.20 280)",
+                      border: `1px solid ${tryOnDisabled ? "oklch(0.30 0.06 300 / 0.4)" : "oklch(0.55 0.18 280 / 0.35)"}`,
+                      cursor: tryOnDisabled ? "not-allowed" : "pointer",
+                      opacity: tryOnDisabled ? 0.6 : 1,
+                    }}
+                    onClick={tryOnDisabled ? undefined : onTryOn}
+                    disabled={tryOnDisabled}
+                  >
+                    <Camera className="w-3 h-3" />
+                    {hasBodyPhoto ? "Try On Me" : "Try On"}
+                  </button>
+                </span>
+              </TooltipTrigger>
+              {tryOnDisabled && (
+                <TooltipContent side="top" sideOffset={6}>
+                  Upload your photo above to try this on
+                </TooltipContent>
+              )}
+            </Tooltip>
+          )}
+          {/* View Try-On button — shown after render completes */}
+          {isDone && onViewTryOn && (
             <button
               className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
-              style={{ background: "oklch(0.55 0.18 280 / 0.15)", color: "oklch(0.78 0.20 280)", border: "1px solid oklch(0.55 0.18 280 / 0.35)" }}
-              onClick={onTryOn}
-              title={hasBodyPhoto ? "Render this outfit on your photo using FASHN.ai" : "Upload your photo above to try this on yourself — or renders on a stock model"}
+              style={{ background: "oklch(0.78 0.20 160 / 0.15)", color: "oklch(0.78 0.20 160)", border: "1px solid oklch(0.78 0.20 160 / 0.35)" }}
+              onClick={onViewTryOn}
             >
-              <Camera className="w-3 h-3" />
-              {hasBodyPhoto ? "Try On Me" : "Try On"}
+              <Eye className="w-3 h-3" />
+              View Try-On
             </button>
           )}
         </div>
@@ -261,7 +297,7 @@ function useVoiceRecorder(onTranscript: (text: string) => void) {
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -272,28 +308,26 @@ function useVoiceRecorder(onTranscript: (text: string) => void) {
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64 = (reader.result as string).split(",")[1];
-          setIsTranscribing(true);
-          try {
-            const result = await transcribeMutation.mutateAsync({
-              audioBase64: base64,
-              mimeType: "audio/webm",
-              language: "en",
-              prompt: "Festival fashion description: vibe, colors, garments, aesthetic",
-            });
-            if (result.text) {
-              onTranscript(result.text);
-              toast.success("Voice transcribed!");
-            }
-          } catch (err: any) {
-            toast.error(`Transcription failed: ${err?.message ?? "Unknown error"}`);
-          } finally {
-            setIsTranscribing(false);
-          }
-        };
-        reader.readAsDataURL(blob);
+        if (blob.size === 0) return;
+
+        setIsTranscribing(true);
+        try {
+          const reader = new FileReader();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => {
+              const result = reader.result as string;
+              resolve(result.split(",")[1] ?? result);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          const result = await transcribeMutation.mutateAsync({ audioBase64: base64, mimeType: "audio/webm" });
+          if (result.text) onTranscript(result.text);
+        } catch {
+          toast.error("Transcription failed. Try again.");
+        } finally {
+          setIsTranscribing(false);
+        }
       };
 
       mediaRecorder.start();
@@ -350,6 +384,7 @@ export default function DesignStudio() {
   const [, navigate] = useLocation();
   const search = useSearch();
   const { user, isAuthenticated } = useAuth();
+  const isMobile = useIsMobile();
 
   // Read requestId from URL query param (e.g. /design-studio?requestId=42)
   const urlRequestId = useMemo(() => {
@@ -375,10 +410,14 @@ export default function DesignStudio() {
   const [showGenerateBar, setShowGenerateBar] = useState(false);
   const [showPacketModal, setShowPacketModal] = useState(false);
   const [threadLoaded, setThreadLoaded] = useState(false);
+  // Try-On lightbox state
+  const [tryOnLightbox, setTryOnLightbox] = useState<{ url: string; storyName: string } | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Track how many user messages sent (show generate bar after 2+)
   const userMessageCountRef = useRef(0);
+  // Mobile tab state
+  const [mobileTab, setMobileTab] = useState<string>("chat");
 
   // Guest token — stable per browser session, stored in localStorage
   const [guestToken] = useState<string>(() => {
@@ -479,6 +518,14 @@ export default function DesignStudio() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Auto-switch to concepts tab on mobile when concepts arrive
+  useEffect(() => {
+    if (isMobile && concepts.length > 0 && mobileTab === "chat") {
+      setMobileTab("concepts");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [concepts.length, isMobile]);
 
   // handleTryOn: user-triggered FASHN render — generates flat-lay then model render
   const handleTryOn = useCallback(async (concept: ConceptCardData) => {
@@ -750,21 +797,318 @@ export default function DesignStudio() {
     setInputValue((prev) => (prev ? `${prev}, ${text}` : text));
   });
 
+  // Open Try-On lightbox for a concept
+  const handleViewTryOn = (concept: ConceptCardData) => {
+    const render = fashnRenders.get(concept.id);
+    if (render?.status === "done" && render.url) {
+      setTryOnLightbox({ url: render.url, storyName: concept.storyName });
+    }
+  };
+
+  // ── Shared sub-components ───────────────────────────────────────────────────
+
+  const conceptsHeader = (
+    <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-border">
+      <div className="flex items-center gap-2">
+        <Star className="w-4 h-4" style={{ color: "oklch(0.72 0.22 340)" }} />
+        <span className="font-display font-semibold text-sm text-foreground">Concept Directions</span>
+        {concepts.length > 0 && (
+          <span className="glass px-2 py-0.5 rounded-full text-xs text-muted-foreground">
+            {concepts.length} generated
+          </span>
+        )}
+      </div>
+      {concepts.length > 0 && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-xs text-muted-foreground hover:text-foreground gap-1"
+          onClick={() => {
+            setConcepts([]);
+            setSelectedConcept(null);
+            setRequestId(null);
+            userMessageCountRef.current = 0;
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+            addMessage("assistant", "Starting fresh! Tell me your new vibe.");
+          }}
+        >
+          <RefreshCw className="w-3 h-3" />
+          Regenerate
+        </Button>
+      )}
+    </div>
+  );
+
+  const conceptsEmptyState = (
+    <div className="h-full flex flex-col items-center justify-center text-center">
+      <div className="relative w-48 h-48 mb-8">
+        <div
+          className="absolute inset-0 rounded-full animate-pulse-glow"
+          style={{ background: "radial-gradient(circle, oklch(0.72 0.22 340 / 0.1) 0%, transparent 70%)" }}
+        />
+        <div
+          className="absolute inset-8 rounded-full animate-spin-slow"
+          style={{ border: "1px dashed oklch(0.72 0.22 340 / 0.3)" }}
+        />
+        <div
+          className="absolute inset-16 rounded-full flex items-center justify-center"
+          style={{ background: "oklch(0.72 0.22 340 / 0.1)" }}
+        >
+          <Sparkles className="w-8 h-8" style={{ color: "oklch(0.72 0.22 340 / 0.6)" }} />
+        </div>
+      </div>
+      <h3 className="font-display font-bold text-xl text-foreground mb-2">
+        {isGenerating ? "Generating Concepts..." : "Your Concepts Appear Here"}
+      </h3>
+      <p className="text-muted-foreground text-sm max-w-xs">
+        {isGenerating
+          ? "Claude is scanning EDC venue DNA and building your story-led directions with AI mood boards..."
+          : "Chat with the AI about your vibe — after a few messages, hit Generate Concepts to see your custom directions."}
+      </p>
+      {isGenerating && (
+        <div className="mt-4 flex gap-1">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="w-2 h-2 rounded-full animate-bounce"
+              style={{
+                background: "oklch(0.72 0.22 340)",
+                animationDelay: `${i * 0.15}s`,
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const bodyPhotoCard = isAuthenticated ? (
+    <div
+      className="rounded-xl p-3 flex items-center gap-3 cursor-pointer transition-all"
+      style={{
+        borderWidth: "2px",
+        borderStyle: bodyPhotoUrl ? "solid" : "dashed",
+        borderColor: bodyPhotoUrl ? "oklch(0.78 0.20 160 / 0.6)" : "oklch(0.65 0.22 20 / 0.5)",
+        background: bodyPhotoUrl ? "oklch(0.78 0.20 160 / 0.05)" : "oklch(0.65 0.22 20 / 0.05)",
+      }}
+      onClick={() => document.getElementById("body-photo-input")?.click()}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleBodyPhotoUpload(f); }}
+    >
+      <input
+        id="body-photo-input"
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBodyPhotoUpload(f); e.target.value = ""; }}
+      />
+      {bodyPhotoUrl ? (
+        <img src={bodyPhotoUrl} alt="Your photo" className="w-12 h-16 object-cover rounded-lg flex-shrink-0" style={{ objectPosition: "top" }} />
+      ) : (
+        <div className="w-12 h-16 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.2 0.06 300)" }}>
+          <Camera className="w-5 h-5" style={{ color: "oklch(0.65 0.22 20)" }} />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold" style={{ color: bodyPhotoUrl ? "oklch(0.78 0.20 160)" : "oklch(0.65 0.22 20)" }}>
+          {bodyPhotoUrl ? "Your Try-On Photo" : "Upload Your Photo"}
+        </p>
+        <p className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.08 300)" }}>
+          {bodyPhotoUploading ? "Uploading..." : bodyPhotoUrl ? "Tap to change · Used for Try On renders" : "Required for Try On · Full body photo"}
+        </p>
+      </div>
+      {bodyPhotoUploading && <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" style={{ color: "oklch(0.72 0.22 340)" }} />}
+      {bodyPhotoUrl && (
+        <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.78 0.20 160)" }}>
+          <Check className="w-3 h-3" style={{ color: "oklch(0.06 0.02 300)" }} />
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  const conceptCardsList = (
+    <div className="grid grid-cols-1 gap-4">
+      {bodyPhotoCard}
+      {concepts.map((concept, i) => (
+        <ConceptCard
+          key={concept.id}
+          concept={concept}
+          index={i}
+          isSelected={selectedConcept === concept.id}
+          onSelect={() => handleSelectConcept(concept.id)}
+          onReject={() => handleRejectConcept(concept.id)}
+          fashnRender={fashnRenders.get(concept.id)}
+          onTryOn={isAuthenticated ? () => handleTryOn(concept) : undefined}
+          hasBodyPhoto={!!bodyPhotoUrl}
+          onViewTryOn={() => handleViewTryOn(concept)}
+        />
+      ))}
+    </div>
+  );
+
+  const conceptsPanel = (
+    <>
+      {conceptsHeader}
+      <div className="flex-1 overflow-y-auto p-6">
+        {concepts.length === 0 ? conceptsEmptyState : conceptCardsList}
+      </div>
+      {selectedConcept !== null && (
+        <div className="flex-shrink-0 p-4 border-t border-border glass-strong">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-6 h-6 rounded-full flex items-center justify-center"
+                style={{ background: "oklch(0.72 0.22 340)" }}
+              >
+                <Check className="w-3 h-3" style={{ color: "oklch(0.06 0.02 300)" }} />
+              </div>
+              <span className="text-sm font-medium text-foreground">
+                {concepts.find((c) => c.id === selectedConcept)?.storyName} selected
+              </span>
+            </div>
+            <Button
+              size="sm"
+              className="text-xs font-semibold gap-1"
+              style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
+              onClick={() => setShowPacketModal(true)}
+            >
+              View Packet
+              <ChevronRight className="w-3 h-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const chatPanel = (
+    <>
+      <div className="absolute right-0 top-0 w-full h-full pointer-events-none overflow-hidden">
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "radial-gradient(ellipse at 80% 20%, oklch(0.55 0.18 340 / 0.06) 0%, transparent 60%)",
+          }}
+        />
+      </div>
+
+      {/* Chat header */}
+      <div className="flex-shrink-0 flex items-center gap-3 px-6 py-4 border-b border-border relative z-10">
+        <div
+          className="w-8 h-8 rounded-xl flex items-center justify-center animate-pulse-glow"
+          style={{ background: "oklch(0.72 0.22 340 / 0.15)" }}
+        >
+          <Zap className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
+        </div>
+        <div>
+          <span className="font-display font-semibold text-sm text-foreground">HAUZZ Design Agent</span>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-xs text-muted-foreground">Claude · EDC DNA loaded</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-6 py-4 relative z-10">
+        {messages.map((msg, i) => (
+          <ChatMessage key={i} msg={msg} />
+        ))}
+        {(isGenerating || isChatLoading) && (
+          <div className="flex gap-3 mb-4">
+            <div
+              className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
+              style={{ background: "oklch(0.72 0.22 340 / 0.2)" }}
+            >
+              <Sparkles className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
+            </div>
+            <div className="glass rounded-2xl px-4 py-3 flex items-center gap-1.5">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-2 h-2 rounded-full animate-bounce"
+                  style={{ background: "oklch(0.72 0.22 340)", animationDelay: `${i * 0.15}s` }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        <div ref={chatEndRef} />
+      </div>
+
+      {/* Generate concepts bar — appears after 2+ messages */}
+      {showGenerateBar && concepts.length === 0 && !isGenerating && (
+        <GenerateConceptsBar
+          onGenerate={handleGenerateConcepts}
+          isAuthenticated={isAuthenticated}
+        />
+      )}
+
+      {/* Chat input — always visible, works without auth */}
+      <div className="flex-shrink-0 border-t border-border relative z-10 p-4 flex gap-3">
+        <button
+          onClick={isRecording ? stopRecording : startRecording}
+          disabled={isTranscribing}
+          className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
+            isRecording ? "animate-pulse" : ""
+          }`}
+          style={{
+            background: isRecording
+              ? "oklch(0.65 0.22 20)"
+              : isTranscribing
+              ? "oklch(0.55 0.10 300 / 0.5)"
+              : "oklch(0.72 0.22 340 / 0.15)",
+            border: `1px solid ${isRecording ? "oklch(0.65 0.22 20 / 0.5)" : "oklch(0.72 0.22 340 / 0.3)"}`,
+          }}
+          title={isRecording ? "Stop recording" : "Speak your vibe"}
+        >
+          {isTranscribing ? (
+            <Loader2 className="w-4 h-4 animate-spin" style={{ color: "oklch(0.85 0.18 340)" }} />
+          ) : isRecording ? (
+            <MicOff className="w-4 h-4" style={{ color: "oklch(0.97 0.01 300)" }} />
+          ) : (
+            <Mic className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
+          )}
+        </button>
+        <Input
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+          placeholder="Tell me your vibe — aesthetic, colors, energy..."
+          className="flex-1 glass border-border/50 text-foreground placeholder:text-muted-foreground/50 rounded-xl"
+          disabled={isChatLoading || isGenerating}
+        />
+        <Button
+          onClick={handleSendMessage}
+          disabled={!inputValue.trim() || isChatLoading || isGenerating}
+          className="rounded-xl px-4"
+          style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
+        >
+          {isChatLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Send className="w-4 h-4" />
+          )}
+        </Button>
+      </div>
+    </>
+  );
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
       {/* ── Nav ── */}
-      <nav className="flex-shrink-0 flex items-center justify-between px-6 py-4 glass-strong border-b border-border z-50">
+      <nav className="flex-shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 glass-strong border-b border-border z-50">
         <button
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           onClick={() => navigate("/festival-map")}
         >
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium">Festival Map</span>
+          <span className="text-sm font-medium hidden sm:inline">Festival Map</span>
         </button>
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-full" style={{ background: "oklch(0.72 0.22 340)" }} />
-          <span className="font-display font-bold text-base text-foreground">Design Studio</span>
-          <span className="glass px-2 py-0.5 rounded-full text-xs" style={{ color: "oklch(0.85 0.18 340)" }}>
+          <span className="font-display font-bold text-sm sm:text-base text-foreground">Design Studio</span>
+          <span className="glass px-2 py-0.5 rounded-full text-xs hidden sm:inline" style={{ color: "oklch(0.85 0.18 340)" }}>
             EDC Las Vegas
           </span>
         </div>
@@ -777,8 +1121,8 @@ export default function DesignStudio() {
               >
                 My Designs
               </button>
-              <span className="text-xs text-muted-foreground opacity-40">·</span>
-              <span className="text-xs text-muted-foreground">{user?.name}</span>
+              <span className="text-xs text-muted-foreground opacity-40 hidden sm:inline">·</span>
+              <span className="text-xs text-muted-foreground hidden sm:inline">{user?.name}</span>
             </>
           ) : (
             <Button
@@ -793,274 +1137,81 @@ export default function DesignStudio() {
         </div>
       </nav>
 
-      {/* ── Split layout ── */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* ── LEFT: Visual Concepts Panel ── */}
-        <div className="w-1/2 flex flex-col border-r border-border overflow-hidden">
-          <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-border">
-            <div className="flex items-center gap-2">
-              <Star className="w-4 h-4" style={{ color: "oklch(0.72 0.22 340)" }} />
-              <span className="font-display font-semibold text-sm text-foreground">Concept Directions</span>
+      {/* ── Layout: Desktop split pane / Mobile tabs ── */}
+      {isMobile ? (
+        /* ── MOBILE: Tab-based layout ── */
+        <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="flex-shrink-0 w-full rounded-none border-b border-border h-11">
+            <TabsTrigger value="chat" className="flex-1 gap-1.5 text-xs">
+              <Zap className="w-3.5 h-3.5" />
+              Chat
+            </TabsTrigger>
+            <TabsTrigger value="concepts" className="flex-1 gap-1.5 text-xs relative">
+              <Star className="w-3.5 h-3.5" />
+              Concepts
               {concepts.length > 0 && (
-                <span className="glass px-2 py-0.5 rounded-full text-xs text-muted-foreground">
-                  {concepts.length} generated
+                <span
+                  className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                  style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
+                >
+                  {concepts.length}
                 </span>
               )}
-            </div>
-            {concepts.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground hover:text-foreground gap-1"
-                onClick={() => {
-                  setConcepts([]);
-                  setSelectedConcept(null);
-                  setRequestId(null);
-                  userMessageCountRef.current = 0;
-                  if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-                  addMessage("assistant", "Starting fresh! Tell me your new vibe.");
-                }}
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="chat" className="flex-1 flex flex-col overflow-hidden">
+            {chatPanel}
+          </TabsContent>
+          <TabsContent value="concepts" className="flex-1 flex flex-col overflow-hidden">
+            {conceptsPanel}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        /* ── DESKTOP: Split pane layout ── */
+        <div className="flex-1 flex overflow-hidden">
+          {/* ── LEFT: Visual Concepts Panel ── */}
+          <div className="w-1/2 flex flex-col border-r border-border overflow-hidden">
+            {conceptsPanel}
+          </div>
+
+          {/* ── RIGHT: Chat Interface ── */}
+          <div className="w-1/2 flex flex-col overflow-hidden relative">
+            {chatPanel}
+          </div>
+        </div>
+      )}
+
+      {/* ── Try-On Lightbox Modal ── */}
+      <Dialog open={tryOnLightbox !== null} onOpenChange={(open) => { if (!open) setTryOnLightbox(null); }}>
+        <DialogContent
+          className="max-w-lg w-full p-0 overflow-hidden"
+          style={{ background: "oklch(0.08 0.02 300)", border: "1px solid oklch(0.72 0.22 340 / 0.3)" }}
+        >
+          <DialogHeader className="px-6 pt-6 pb-3 border-b border-border">
+            <DialogTitle className="flex items-center gap-3 font-display text-lg text-foreground">
+              <div
+                className="w-7 h-7 rounded-xl flex items-center justify-center"
+                style={{ background: "oklch(0.78 0.20 160 / 0.15)" }}
               >
-                <RefreshCw className="w-3 h-3" />
-                Regenerate
-              </Button>
-            )}
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6">
-            {concepts.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center">
-                <div className="relative w-48 h-48 mb-8">
-                  <div
-                    className="absolute inset-0 rounded-full animate-pulse-glow"
-                    style={{ background: "radial-gradient(circle, oklch(0.72 0.22 340 / 0.1) 0%, transparent 70%)" }}
-                  />
-                  <div
-                    className="absolute inset-8 rounded-full animate-spin-slow"
-                    style={{ border: "1px dashed oklch(0.72 0.22 340 / 0.3)" }}
-                  />
-                  <div
-                    className="absolute inset-16 rounded-full flex items-center justify-center"
-                    style={{ background: "oklch(0.72 0.22 340 / 0.1)" }}
-                  >
-                    <Sparkles className="w-8 h-8" style={{ color: "oklch(0.72 0.22 340 / 0.6)" }} />
-                  </div>
-                </div>
-                <h3 className="font-display font-bold text-xl text-foreground mb-2">
-                  {isGenerating ? "Generating Concepts..." : "Your Concepts Appear Here"}
-                </h3>
-                <p className="text-muted-foreground text-sm max-w-xs">
-                  {isGenerating
-                    ? "Claude is scanning EDC venue DNA and building your story-led directions with AI mood boards..."
-                    : "Chat with the AI about your vibe — after a few messages, hit Generate Concepts to see your custom directions."}
-                </p>
-                {isGenerating && (
-                  <div className="mt-4 flex gap-1">
-                    {[0, 1, 2].map((i) => (
-                      <div
-                        key={i}
-                        className="w-2 h-2 rounded-full animate-bounce"
-                        style={{
-                          background: "oklch(0.72 0.22 340)",
-                          animationDelay: `${i * 0.15}s`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
+                <Camera className="w-3.5 h-3.5" style={{ color: "oklch(0.78 0.20 160)" }} />
               </div>
-            ) : (              <div className="grid grid-cols-1 gap-4">
-                {/* Body photo upload card — shown when signed in, above concept cards */}
-                {isAuthenticated && (
-                  <div
-                    className="rounded-xl border border-dashed p-3 flex items-center gap-3 cursor-pointer transition-all hover:border-pink-400/60"
-                    style={{ borderColor: bodyPhotoUrl ? "oklch(0.72 0.22 340 / 0.5)" : "oklch(0.5 0.1 300 / 0.4)", background: "oklch(0.12 0.04 300 / 0.6)" }}
-                    onClick={() => document.getElementById("body-photo-input")?.click()}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleBodyPhotoUpload(f); }}
-                  >
-                    <input
-                      id="body-photo-input"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBodyPhotoUpload(f); e.target.value = ""; }}
-                    />
-                    {bodyPhotoUrl ? (
-                      <img src={bodyPhotoUrl} alt="Your photo" className="w-12 h-16 object-cover rounded-lg flex-shrink-0" style={{ objectPosition: "top" }} />
-                    ) : (
-                      <div className="w-12 h-16 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.2 0.06 300)" }}>
-                        <Camera className="w-5 h-5" style={{ color: "oklch(0.72 0.22 340)" }} />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold" style={{ color: "oklch(0.72 0.22 340)" }}>
-                        {bodyPhotoUrl ? "Your Try-On Photo" : "Upload Your Photo"}
-                      </p>
-                      <p className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.08 300)" }}>
-                        {bodyPhotoUploading ? "Uploading..." : bodyPhotoUrl ? "Tap to change · Used for Try On renders" : "Full body photo · FASHN will render the outfit on you"}
-                      </p>
-                    </div>
-                    {bodyPhotoUploading && <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" style={{ color: "oklch(0.72 0.22 340)" }} />}
-                  </div>
-                )}
-                {concepts.map((concept, i) => (
-                  <ConceptCard
-                    key={concept.id}
-                    concept={concept}
-                    index={i}
-                    isSelected={selectedConcept === concept.id}
-                    onSelect={() => handleSelectConcept(concept.id)}
-                    onReject={() => handleRejectConcept(concept.id)}
-                    fashnRender={fashnRenders.get(concept.id)}
-                    onTryOn={isAuthenticated ? () => handleTryOn(concept) : undefined}
-                    hasBodyPhoto={!!bodyPhotoUrl}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {selectedConcept !== null && (
-            <div className="flex-shrink-0 p-4 border-t border-border glass-strong">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center"
-                    style={{ background: "oklch(0.72 0.22 340)" }}
-                  >
-                    <Check className="w-3 h-3" style={{ color: "oklch(0.06 0.02 300)" }} />
-                  </div>
-                  <span className="text-sm font-medium text-foreground">
-                    {concepts.find((c) => c.id === selectedConcept)?.storyName} selected
-                  </span>
-                </div>
-                <Button
-                  size="sm"
-                  className="text-xs font-semibold gap-1"
-                  style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
-                  onClick={() => setShowPacketModal(true)}
-                >
-                  View Packet
-                  <ChevronRight className="w-3 h-3" />
-                </Button>
-              </div>
+              FASHN Try-On
+              {tryOnLightbox && (
+                <span className="text-sm font-normal text-muted-foreground">— {tryOnLightbox.storyName}</span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {tryOnLightbox && (
+            <div className="p-4">
+              <img
+                src={tryOnLightbox.url}
+                alt={`Try-On render for ${tryOnLightbox.storyName}`}
+                className="w-full rounded-2xl object-contain max-h-[70vh]"
+              />
             </div>
           )}
-        </div>
-
-        {/* ── RIGHT: Chat Interface ── */}
-        <div className="w-1/2 flex flex-col overflow-hidden">
-          <div className="absolute right-0 top-0 w-1/2 h-full pointer-events-none overflow-hidden">
-            <div
-              className="absolute inset-0"
-              style={{
-                background: "radial-gradient(ellipse at 80% 20%, oklch(0.55 0.18 340 / 0.06) 0%, transparent 60%)",
-              }}
-            />
-          </div>
-
-          {/* Chat header */}
-          <div className="flex-shrink-0 flex items-center gap-3 px-6 py-4 border-b border-border relative z-10">
-            <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center animate-pulse-glow"
-              style={{ background: "oklch(0.72 0.22 340 / 0.15)" }}
-            >
-              <Zap className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
-            </div>
-            <div>
-              <span className="font-display font-semibold text-sm text-foreground">HAUZZ Design Agent</span>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-xs text-muted-foreground">Claude · EDC DNA loaded</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 relative z-10">
-            {messages.map((msg, i) => (
-              <ChatMessage key={i} msg={msg} />
-            ))}
-            {(isGenerating || isChatLoading) && (
-              <div className="flex gap-3 mb-4">
-                <div
-                  className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
-                  style={{ background: "oklch(0.72 0.22 340 / 0.2)" }}
-                >
-                  <Sparkles className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
-                </div>
-                <div className="glass rounded-2xl px-4 py-3 flex items-center gap-1.5">
-                  {[0, 1, 2].map((i) => (
-                    <div
-                      key={i}
-                      className="w-2 h-2 rounded-full animate-bounce"
-                      style={{ background: "oklch(0.72 0.22 340)", animationDelay: `${i * 0.15}s` }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Generate concepts bar — appears after 2+ messages */}
-          {showGenerateBar && concepts.length === 0 && !isGenerating && (
-            <GenerateConceptsBar
-              onGenerate={handleGenerateConcepts}
-              isAuthenticated={isAuthenticated}
-            />
-          )}
-
-          {/* Chat input — always visible, works without auth */}
-          <div className="flex-shrink-0 border-t border-border relative z-10 p-4 flex gap-3">
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              disabled={isTranscribing}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
-                isRecording ? "animate-pulse" : ""
-              }`}
-              style={{
-                background: isRecording
-                  ? "oklch(0.65 0.22 20)"
-                  : isTranscribing
-                  ? "oklch(0.55 0.10 300 / 0.5)"
-                  : "oklch(0.72 0.22 340 / 0.15)",
-                border: `1px solid ${isRecording ? "oklch(0.65 0.22 20 / 0.5)" : "oklch(0.72 0.22 340 / 0.3)"}`,
-              }}
-              title={isRecording ? "Stop recording" : "Speak your vibe"}
-            >
-              {isTranscribing ? (
-                <Loader2 className="w-4 h-4 animate-spin" style={{ color: "oklch(0.85 0.18 340)" }} />
-              ) : isRecording ? (
-                <MicOff className="w-4 h-4" style={{ color: "oklch(0.97 0.01 300)" }} />
-              ) : (
-                <Mic className="w-4 h-4" style={{ color: "oklch(0.85 0.18 340)" }} />
-              )}
-            </button>
-            <Input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-              placeholder="Tell me your vibe — aesthetic, colors, energy..."
-              className="flex-1 glass border-border/50 text-foreground placeholder:text-muted-foreground/50 rounded-xl"
-              disabled={isChatLoading || isGenerating}
-            />
-            <Button
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isChatLoading || isGenerating}
-              className="rounded-xl px-4"
-              style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
-            >
-              {isChatLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Design Packet Modal ── */}
       <Dialog open={showPacketModal} onOpenChange={setShowPacketModal}>
