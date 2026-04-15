@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Sparkles, Zap, Star, RefreshCw, Check, ChevronRight, Mic, MicOff, Loader2, Package, Palette, Scissors, AlertTriangle, FileText, Camera, Eye } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, Zap, Star, RefreshCw, Check, ChevronRight, Mic, MicOff, Loader2, Package, Palette, Scissors, AlertTriangle, FileText, Camera, Eye, ShoppingCart } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -980,15 +980,39 @@ export default function DesignStudio() {
                 {concepts.find((c) => c.id === selectedConcept)?.storyName} selected
               </span>
             </div>
-            <Button
-              size="sm"
-              className="text-xs font-semibold gap-1"
-              style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
-              onClick={() => setShowPacketModal(true)}
-            >
-              View Packet
-              <ChevronRight className="w-3 h-3" />
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="text-xs font-semibold gap-1"
+                variant="outline"
+                onClick={() => setShowPacketModal(true)}
+              >
+                View Packet
+                <ChevronRight className="w-3 h-3" />
+              </Button>
+              <Button
+                size="sm"
+                className="text-xs font-bold gap-1"
+                style={{ background: "oklch(0.72 0.22 340)", color: "oklch(0.06 0.02 300)" }}
+                onClick={() => {
+                  const concept = concepts.find((c) => c.id === selectedConcept);
+                  if (!concept) return;
+                  const img = concept.imageUrl ?? "";
+                  const params = new URLSearchParams({
+                    requestId: String(requestId ?? 0),
+                    imageUrl: img,
+                    productId: "358",
+                    variantId: "0",
+                    productName: encodeURIComponent("All-Over Print T-Shirt"),
+                    price: "6900",
+                  });
+                  navigate("/checkout?" + params.toString());
+                }}
+              >
+                <ShoppingCart className="w-3 h-3" />
+                Make This Real
+              </Button>
+            </div>
           </div>
         </div>
       )}

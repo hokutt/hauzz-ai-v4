@@ -9,6 +9,8 @@ import { adminRouter } from "./routers/admin";
 import { voiceRouter } from "./routers/voice";
 import { aiChatRouter } from "./routers/aiChat";
 import { measurementsRouter } from "./routers/measurements";
+import { printfulRouter } from "./routers/printful";
+import { checkoutRouter } from "./routers/checkout";
 
 export const appRouter = router({
   system: systemRouter,
@@ -30,6 +32,8 @@ export const appRouter = router({
   voice: voiceRouter,           // Voice intake transcription (Whisper)
   aiChat: aiChatRouter,         // Claude-powered chat + vendor email drafting
   measurements: measurementsRouter, // User body measurements & sizing
+  printful: printfulRouter,           // Printful catalog, mockups, orders
+  checkout: checkoutRouter,           // Stripe payment intents + fulfillment
 });
 
 export type AppRouter = typeof appRouter;

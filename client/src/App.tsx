@@ -10,6 +10,7 @@ import DesignStudio from "./pages/DesignStudio";
 import AdminDashboard from "./pages/AdminDashboard";
 import MyDesigns from "./pages/MyDesigns";
 import OrderTracking from "./pages/OrderTracking";
+import Checkout from "./pages/Checkout";
 import FitProfile from "./pages/FitProfile";
 
 function Router() {
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/my-designs" component={MyDesigns} />
       <Route path="/my-order" component={OrderTracking} />
+      <Route path="/checkout" component={Checkout} />
       <Route path="/fit-profile" component={FitProfile} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
