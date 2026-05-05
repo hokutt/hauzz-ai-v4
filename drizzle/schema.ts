@@ -337,3 +337,33 @@ export const userMeasurements = pgTable("user_measurements", {
 
 export type UserMeasurement = typeof userMeasurements.$inferSelect;
 export type InsertUserMeasurement = typeof userMeasurements.$inferInsert;
+
+// ─── Voice Trade Journal ────────────────────────────────────────────────────
+
+export const tradeSideEnum = pgEnum("trade_side", ["long", "short"]);
+export const tradeStatusEnum = pgEnum("trade_status", ["open", "closed"]);
+
+export const trades = pgTable("trades", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  symbol: varchar("symbol", { length: 32 }),
+  side: tradeSideEnum("side"),
+  status: tradeStatusEnum("status").default("open").notNull(),
+  entryPrice: doublePrecision("entry_price"),
+  exitPrice: doublePrecision("exit_price"),
+  quantity: doublePrecision("quantity"),
+  pnl: doublePrecision("pnl"),
+  entryAt: timestamp("entry_at"),
+  exitAt: timestamp("exit_at"),
+  strategy: varchar("strategy", { length: 128 }),
+  notes: text("notes"),
+  tags: jsonb("tags").$type<string[]>().default([]),
+  imageUrls: jsonb("image_urls").$type<string[]>().default([]),
+  rawTranscript: text("raw_transcript"),
+  agentSummary: text("agent_summary"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Trade = typeof trades.$inferSelect;
+export type InsertTrade = typeof trades.$inferInsert;
