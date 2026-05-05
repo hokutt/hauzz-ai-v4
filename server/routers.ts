@@ -11,6 +11,7 @@ import { aiChatRouter } from "./routers/aiChat";
 import { measurementsRouter } from "./routers/measurements";
 import { printfulRouter } from "./routers/printful";
 import { checkoutRouter } from "./routers/checkout";
+import { tradeJournalRouter } from "./routers/tradeJournal";
 
 export const appRouter = router({
   system: systemRouter,
@@ -34,6 +35,7 @@ export const appRouter = router({
   measurements: measurementsRouter, // User body measurements & sizing
   printful: printfulRouter,           // Printful catalog, mockups, orders
   checkout: checkoutRouter,           // Stripe payment intents + fulfillment
+  tradeJournal: tradeJournalRouter,   // Voice + photo trade journal
 });
 
 export type AppRouter = typeof appRouter;
